@@ -19,7 +19,11 @@ class ApiService {
             baseUrl: AppConfig.apiBaseUrl,
             connectTimeout: const Duration(seconds: 15),
             receiveTimeout: const Duration(seconds: 20),
-            headers: {'Accept': 'application/json'},
+            headers: {
+              'Accept': 'application/json',
+              // Skips ngrok's free-plan warning page (harmless everywhere else).
+              'ngrok-skip-browser-warning': '1',
+            },
           ),
         ) {
     dio.interceptors.add(
