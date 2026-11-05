@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/api_exception.dart';
+import '../../core/theme.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/app_header.dart';
 import '../../widgets/error_view.dart';
 
 /// PUT /me — change username and/or password.
@@ -64,23 +66,44 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget build(BuildContext context) {
     final busy = context.watch<AuthProvider>().busy;
 
+    final user = context.watch<AuthProvider>().user;
+    final name = user?.username ?? '';
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Edit profile')),
-      body: SafeArea(
+      body: Column(
+        children: [
+          const AppHeader(title: 'Edit profile', showBack: true),
+          Expanded(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Center(
+                  child: CircleAvatar(
+                    radius: 42,
+                    backgroundColor: AppColors.gold,
+                    child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?', style: displayStyle(size: 38, color: AppColors.ink)),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text('Your avatar uses the first letter of your username',
+                    textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: AppColors.muted)),
+                const SizedBox(height: 20),
+                const SectionLabel('Account'),
+                const SizedBox(height: 10),
                 TextFormField(
                   controller: _username,
                   decoration: InputDecoration(labelText: 'Username', errorText: _errors['username']),
                   validator: (v) => (v == null || v.trim().length < 3) ? 'At least 3 characters' : null,
                 ),
+                const SizedBox(height: 10),
+                Text('School: ${user?.school?.name ?? '—'}', style: const TextStyle(fontWeight: FontWeight.w700)),
+                const Text('To change your school, ask the administrator.', style: TextStyle(fontSize: 12, color: AppColors.muted)),
                 const SizedBox(height: 24),
-                Text('Change password (optional)', style: Theme.of(context).textTheme.titleSmall),
+                const SectionLabel('Change password · optional'),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _current,
@@ -103,11 +126,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   validator: (v) => (_password.text.isNotEmpty && v != _password.text) ? 'Passwords do not match' : null,
                 ),
                 const SizedBox(height: 24),
-                FilledButton(onPressed: busy ? null : _save, child: const Text('Save')),
+                FilledButton(onPressed: busy ? null : _save, child: const Text('Save changes')),
               ],
             ),
           ),
         ),
+          ),
+        ],
       ),
     );
   }

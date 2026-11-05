@@ -1,4 +1,6 @@
 import 'json.dart';
+import 'puzzle.dart';
+import 'stats.dart';
 
 class GameBadge {
   const GameBadge({required this.code, required this.name, required this.rule, required this.earned, this.earnedAt});
@@ -22,13 +24,31 @@ class GameBadge {
         return 'Earn $n points in total';
       case 'type_solved':
         final type = parts.length == 3 ? parts[1] : '';
-        const names = {'daily': 'Daily Word', 'bugtong': 'Bugtong', 'scramble': 'Word Scramble', 'translate': 'Translate It'};
-        return 'Solve $n ${names[type] ?? type} puzzles';
+        final name = type == PuzzleType.daily ? 'Daily Word' : PuzzleType.label(type);
+        return 'Solve $n $name puzzles';
       case 'languages_solved':
         return 'Solve puzzles in $n languages';
       default:
         return rule;
     }
+  }
+
+  /// Goal from the rule, e.g. 10 for "type_solved:bugtong:10".
+  int get goal => int.tryParse(rule.split(':').last) ?? 1;
+
+  /// How far the player is toward this badge, worked out from their stats.
+  /// (Streak badges use the CURRENT streak.)
+  int progress(PlayerStats stats) {
+    final parts = rule.split(':');
+    final value = switch (parts.first) {
+      'puzzles_solved' => stats.puzzlesSolved,
+      'streak' => stats.currentStreak,
+      'points_total' => stats.totalPoints,
+      'type_solved' => parts.length == 3 ? (stats.solvedByType[parts[1]] ?? 0) : 0,
+      'languages_solved' => stats.languagesPlayed,
+      _ => 0,
+    };
+    return earned ? goal : value.clamp(0, goal).toInt();
   }
 
   factory GameBadge.fromJson(Map<String, dynamic> json) => GameBadge(

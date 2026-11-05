@@ -41,8 +41,8 @@ class AdminRepository {
   Future<List<School>> schools() async =>
       asList(asMap(await _api.get('/admin/schools'))['data']).map((e) => School.fromJson(asMap(e))).toList();
 
-  Future<void> saveSchool({int? id, required String name, String? barangay, required bool isActive}) async {
-    final body = {'name': name.trim(), 'barangay': barangay?.trim(), 'is_active': isActive};
+  Future<void> saveSchool({int? id, required String name, String? barangay, String? type, required bool isActive}) async {
+    final body = {'name': name.trim(), 'barangay': barangay?.trim(), 'is_active': isActive, if (type != null) 'type': type};
     if (id == null) {
       await _api.post('/admin/schools', data: body);
     } else {

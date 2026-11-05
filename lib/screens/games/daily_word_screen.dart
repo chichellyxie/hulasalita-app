@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/theme.dart';
 import '../../models/guess_result.dart';
 import '../../providers/game_provider.dart';
 import '../../repositories/puzzle_repository.dart';
+import '../../widgets/app_header.dart';
 import '../../widgets/error_view.dart';
 import '../../widgets/letter_tile.dart';
-import '../../widgets/puzzle_card.dart';
 import '../../widgets/result_sheet.dart';
 import '../../widgets/word_keyboard.dart';
 
@@ -19,8 +20,26 @@ class DailyWordScreen extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (context) => GameProvider(context.read<PuzzleRepository>())..loadDaily(),
       child: Scaffold(
-        appBar: AppBar(title: const Text('Daily Word Guess')),
-        body: const SafeArea(child: _DailyBody()),
+        body: Column(
+          children: [
+            Consumer<GameProvider>(
+              builder: (context, game, _) => AppHeader(
+                title: 'Daily Word Guess',
+                subtitle: 'Same word for everyone · new word every day',
+                showBack: true,
+                actions: [
+                  if (game.puzzle != null && game.state != GameState.finished)
+                    Pill(
+                      label: '${game.triesLeft} ${game.triesLeft == 1 ? 'try' : 'tries'} left',
+                      background: AppColors.gold,
+                      foreground: AppColors.ink,
+                    ),
+                ],
+              ),
+            ),
+            const Expanded(child: SafeArea(top: false, child: _DailyBody())),
+          ],
+        ),
       ),
     );
   }
@@ -71,14 +90,12 @@ class _DailyBodyState extends State<_DailyBody> {
           child: Column(
             children: [
               Text(puzzle.prompt, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleMedium),
-              if (puzzle.hint != null) ...[
-                const SizedBox(height: 4),
-                Text('Hint: ${puzzle.hint}', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade700)),
-              ],
+              const SizedBox(height: 8),
+              _DailyHint(hint: game.hint, playing: playing, triesLeft: game.triesLeft),
               const SizedBox(height: 8),
               Wrap(spacing: 6, children: [
-                if (puzzle.language != null) InfoChip(label: puzzle.language!.name),
-                DifficultyChip(difficulty: puzzle.difficulty, points: puzzle.basePoints),
+                if (puzzle.language != null) Pill(label: puzzle.language!.name),
+                Pill.difficulty(puzzle.difficulty, points: puzzle.basePoints),
               ]),
             ],
           ),
@@ -97,6 +114,8 @@ class _DailyBodyState extends State<_DailyBody> {
             ),
           ),
         ),
+        const _Legend(),
+        const SizedBox(height: 6),
         if (game.message != null && playing)
           Padding(
             padding: const EdgeInsets.only(bottom: 6),
@@ -149,5 +168,74 @@ class _DailyBodyState extends State<_DailyBody> {
     }
 
     return LetterTile(letter: '', size: size);
+  }
+}
+
+/// Explains the tile colors under the board.
+class _Legend extends StatelessWidget {
+  const _Legend();
+
+  @override
+  Widget build(BuildContext context) {
+    Widget item(Color color, String label) => Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(width: 12, height: 12, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3))),
+            const SizedBox(width: 5),
+            Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF3A4060))),
+          ],
+        );
+    return Wrap(
+      spacing: 14,
+      alignment: WrapAlignment.center,
+      children: [
+        item(AppColors.correct, 'right spot'),
+        item(AppColors.present, 'wrong spot'),
+        item(AppColors.absent, 'not in word'),
+      ],
+    );
+  }
+}
+
+/// Daily hint: locked until only 2 tries are left, then shown in gold.
+class _DailyHint extends StatelessWidget {
+  const _DailyHint({required this.hint, required this.playing, required this.triesLeft});
+
+  final String? hint;
+  final bool playing;
+  final int triesLeft;
+
+  @override
+  Widget build(BuildContext context) {
+    final unlocked = hint != null;
+    if (!unlocked && !playing) return const SizedBox.shrink();
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: unlocked ? AppColors.goldSoft : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: unlocked ? AppColors.gold : AppColors.line, width: unlocked ? 2 : 1),
+      ),
+      child: Row(
+        children: [
+          Icon(unlocked ? Icons.lightbulb_rounded : Icons.lock_outline_rounded,
+              color: unlocked ? const Color(0xFF8A6100) : AppColors.muted, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              unlocked
+                  ? 'Hint: $hint'
+                  : 'A hint unlocks when you have 2 tries left (${triesLeft - 2} more ${triesLeft - 2 == 1 ? 'guess' : 'guesses'}).',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: unlocked ? FontWeight.w800 : FontWeight.w600,
+                color: unlocked ? const Color(0xFF3A2E0E) : AppColors.muted,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

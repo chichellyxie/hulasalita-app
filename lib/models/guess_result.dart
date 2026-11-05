@@ -1,5 +1,6 @@
 import 'badge.dart';
 import 'json.dart';
+import 'puzzle.dart';
 
 class LetterFeedback {
   const LetterFeedback({required this.letter, required this.state});
@@ -31,6 +32,8 @@ class GuessResult {
     required this.newBadges,
     this.letters,
     this.answer,
+    this.learn,
+    this.hint,
   });
 
   final int puzzleId;
@@ -49,6 +52,8 @@ class GuessResult {
   final List<LetterFeedback>? letters;
   final String? answer;
   final List<GameBadge> newBadges;
+  final LearnCard? learn;
+  final String? hint; // daily hint, sent once only a few tries are left
 
   factory GuessResult.fromJson(Map<String, dynamic> json) => GuessResult(
         puzzleId: asInt(json['puzzle_id']),
@@ -69,5 +74,7 @@ class GuessResult {
             : null,
         answer: asStringOrNull(json['answer']),
         newBadges: asList(json['new_badges']).map((e) => GameBadge.fromJson(asMap(e))).toList(),
+        learn: LearnCard.fromJsonOrNull(json['learn']),
+        hint: asStringOrNull(json['hint']),
       );
 }

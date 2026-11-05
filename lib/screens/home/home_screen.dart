@@ -29,10 +29,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const titles = ['Play', 'Leaderboard', 'Profile'];
-
+    // Each tab draws its own navy AppHeader (no AppBar here).
     return Scaffold(
-      appBar: AppBar(title: Text(_index == 0 ? 'HulaSalita' : titles[_index])),
       body: IndexedStack(
         index: _index,
         children: const [PlayTab(), LeaderboardTab(), ProfileTab()],
@@ -45,8 +43,8 @@ class _HomeScreenState extends State<HomeScreen> {
           if (i == 2) context.read<StatsProvider>().load();
         },
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.videogame_asset_outlined), selectedIcon: Icon(Icons.videogame_asset), label: 'Play'),
-          NavigationDestination(icon: Icon(Icons.leaderboard_outlined), selectedIcon: Icon(Icons.leaderboard), label: 'Leaderboard'),
+          NavigationDestination(icon: Icon(Icons.sports_esports_outlined), selectedIcon: Icon(Icons.sports_esports), label: 'Play'),
+          NavigationDestination(icon: Icon(Icons.emoji_events_outlined), selectedIcon: Icon(Icons.emoji_events), label: 'Leaderboard'),
           NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
         ],
       ),

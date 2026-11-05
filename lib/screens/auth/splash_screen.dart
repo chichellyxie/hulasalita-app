@@ -20,9 +20,12 @@ class SplashScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               const AppLogo(light: true),
+              const SizedBox(height: 8),
+              const Text('Word games in English, Filipino and Pangasinan',
+                  textAlign: TextAlign.center, style: TextStyle(color: Color(0xFFC9CDF2), fontWeight: FontWeight.w600)),
               const SizedBox(height: 32),
               if (auth.startupError == null)
-                const CircularProgressIndicator(color: Colors.white)
+                const CircularProgressIndicator(color: AppColors.gold)
               else ...[
                 Text(auth.startupError!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
                 const SizedBox(height: 16),
@@ -41,38 +44,51 @@ class SplashScreen extends StatelessWidget {
   }
 }
 
-/// "HulaSalita" word mark built from letter tiles.
+/// "HulaSalita" word mark built from letter tiles (gold HULA, white/navy SALITA).
 class AppLogo extends StatelessWidget {
-  const AppLogo({super.key, this.light = false});
+  const AppLogo({super.key, this.light = false, this.big = true});
 
+  /// true = on a navy background (white SALITA tiles).
   final bool light;
+  final bool big;
 
   @override
   Widget build(BuildContext context) {
-    final color = light ? Colors.white : AppColors.navy;
+    final hula = big ? 52.0 : 40.0;
+    final salita = big ? 44.0 : 34.0;
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Row(
           mainAxisSize: MainAxisSize.min,
-          children: 'HULA'.split('').map((ch) => _tile(ch, AppColors.gold)).toList(),
+          children: 'HULA'.split('').map((ch) => _tile(ch, hula, AppColors.gold, AppColors.ink, AppColors.goldDark)).toList(),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         Row(
           mainAxisSize: MainAxisSize.min,
-          children: 'SALITA'.split('').map((ch) => _tile(ch, light ? AppColors.navyLight : AppColors.navy)).toList(),
+          children: 'SALITA'
+              .split('')
+              .map((ch) => light
+                  ? _tile(ch, salita, Colors.white, AppColors.navy, const Color(0xFF9FA6CC))
+                  : _tile(ch, salita, AppColors.navy, Colors.white, AppColors.navyDark))
+              .toList(),
         ),
         const SizedBox(height: 12),
-        Text('Hulaan ang salita!', style: TextStyle(color: color, fontSize: 16, fontStyle: FontStyle.italic)),
+        Text('Hulaan ang salita!', style: displayStyle(size: big ? 22 : 18, color: light ? AppColors.gold : AppColors.navy, weight: FontWeight.w700)),
       ],
     );
   }
 
-  Widget _tile(String ch, Color background) => Container(
-        width: 38,
-        height: 38,
-        margin: const EdgeInsets.all(2),
+  Widget _tile(String ch, double size, Color background, Color text, Color shadow) => Container(
+        width: size,
+        height: size + 4,
+        margin: const EdgeInsets.symmetric(horizontal: 3),
         alignment: Alignment.center,
-        decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(6)),
-        child: Text(ch, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(size * 0.27),
+          boxShadow: [BoxShadow(color: shadow, offset: const Offset(0, 4))],
+        ),
+        child: Text(ch, style: displayStyle(size: size * 0.56, color: text)),
       );
 }

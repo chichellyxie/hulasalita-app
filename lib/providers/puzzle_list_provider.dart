@@ -6,13 +6,14 @@ import '../repositories/puzzle_repository.dart';
 
 /// List of Bugtong / Word Scramble / Translate It puzzles with filters.
 class PuzzleListProvider extends ChangeNotifier {
-  PuzzleListProvider(this._repo, this.type);
+  PuzzleListProvider(this._repo, this.type, {this.level});
 
   final PuzzleRepository _repo;
   final String type;
 
   String? language; // en | fil | pag | null (all)
-  String? difficulty; // easy | medium | hard | null (all)
+  String difficulty = 'easy'; // easy | medium | hard (no "All": one difficulty at a time)
+  String? level; // elem_lower | elem_upper | jhs | shs | null (all levels)
 
   final List<Puzzle> items = [];
   bool loading = false;
@@ -28,7 +29,7 @@ class PuzzleListProvider extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      final page = await _repo.list(type: type, language: language, difficulty: difficulty, page: 1);
+      final page = await _repo.list(type: type, language: language, difficulty: difficulty, level: level, page: 1);
       items
         ..clear()
         ..addAll(page.items);
@@ -46,7 +47,7 @@ class PuzzleListProvider extends ChangeNotifier {
     loadingMore = true;
     notifyListeners();
     try {
-      final page = await _repo.list(type: type, language: language, difficulty: difficulty, page: _page + 1);
+      final page = await _repo.list(type: type, language: language, difficulty: difficulty, level: level, page: _page + 1);
       items.addAll(page.items);
       _page = page.currentPage;
       _hasMore = page.hasMore;
@@ -62,7 +63,12 @@ class PuzzleListProvider extends ChangeNotifier {
     refresh();
   }
 
-  void setDifficulty(String? value) {
+  void setLevel(String? value) {
+    level = value;
+    refresh();
+  }
+
+  void setDifficulty(String value) {
     difficulty = value;
     refresh();
   }

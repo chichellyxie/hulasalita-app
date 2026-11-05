@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/api_exception.dart';
+import '../../core/theme.dart';
 import '../../models/school.dart';
 import '../../providers/auth_provider.dart';
 import '../../repositories/reference_repository.dart';
+import '../../widgets/app_header.dart';
 import '../../widgets/error_view.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -23,6 +25,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   late Future<List<School>> _schoolsFuture;
   School? _school;
+  String? _schoolLevel; // 'elementary' | 'high' — only filters the list, never saved
   bool _privacyAccepted = false;
   Map<String, String?> _serverErrors = {};
 
@@ -101,10 +104,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final busy = context.watch<AuthProvider>().busy;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Create account')),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+      body: Column(
+        children: [
+          AppHeader(
+            title: 'Create account',
+            showBack: true,
+            child: const _StepBar(),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 22, 24, 32),
           child: Form(
             key: _formKey,
             child: Column(
@@ -151,9 +160,48 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         }),
                       );
                     }
-                    final schools = snapshot.data ?? [];
-                    return DropdownMenu<School>(
+                    final all = snapshot.data ?? [];
+                    final schools = switch (_schoolLevel) {
+                      'elementary' => all.where((s) => s.hasElementary).toList(),
+                      'high' => all.where((s) => s.hasHighSchool).toList(),
+                      _ => <School>[],
+                    };
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Text('Where do you study?', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF3A4060))),
+                        const SizedBox(height: 8),
+                        SegmentedButton<String>(
+                          segments: const [
+                            ButtonSegment(value: 'elementary', label: Text('Elementary'), icon: Icon(Icons.backpack_outlined)),
+                            ButtonSegment(value: 'high', label: Text('High school'), icon: Icon(Icons.school_outlined)),
+                          ],
+                          emptySelectionAllowed: true,
+                          showSelectedIcon: false,
+                          selected: {if (_schoolLevel != null) _schoolLevel!},
+                          onSelectionChanged: (sel) => setState(() {
+                            _schoolLevel = sel.isEmpty ? null : sel.first;
+                            // Clear a school that is not in the new list.
+                            final keep = _school != null &&
+                                ((_schoolLevel == 'elementary' && _school!.hasElementary) ||
+                                    (_schoolLevel == 'high' && _school!.hasHighSchool));
+                            if (!keep) _school = null;
+                          }),
+                        ),
+                        const SizedBox(height: 12),
+                        if (_schoolLevel == null)
+                          const Text('Choose Elementary or High school first to see the schools.',
+                              style: TextStyle(fontSize: 12, color: AppColors.muted))
+                        else
+                          DropdownMenu<School>(
+                      key: ValueKey(_schoolLevel), // rebuild the menu when the filter changes
                       expandedInsets: EdgeInsets.zero,
+                      // No typing: the list opens only when the student taps the field or the arrow.
+                      enableFilter: false,
+                      enableSearch: false,
+                      requestFocusOnTap: false,
+                      menuHeight: 320,
+                      helperText: '${schools.length} ${_schoolLevel == 'elementary' ? 'elementary' : 'high'} schools · tap to choose',
                       label: const Text('School in Urbiztondo'),
                       leadingIcon: const Icon(Icons.school_outlined),
                       errorText: _serverErrors['school_id'],
@@ -162,6 +210,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       dropdownMenuEntries: schools
                           .map((s) => DropdownMenuEntry<School>(value: s, label: s.name))
                           .toList(),
+                          ),
+                      ],
                     );
                   },
                 ),
@@ -191,6 +241,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   decoration: const InputDecoration(labelText: 'Confirm password', prefixIcon: Icon(Icons.lock_outline)),
                   validator: (v) => v != _password.text ? 'Passwords do not match' : null,
                 ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(color: AppColors.navySoft, borderRadius: BorderRadius.circular(18)),
+                  child: const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.shield_outlined, color: AppColors.navy),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          "Next, you'll upload a photo of your school ID. Only the administrator sees it, and it is deleted after review.",
+                          style: TextStyle(fontSize: 13, height: 1.45, color: Color(0xFF2A2F4A)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 8),
                 CheckboxListTile(
                   contentPadding: EdgeInsets.zero,
@@ -208,14 +276,47 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 FilledButton(
                   onPressed: busy ? null : _submit,
                   child: busy
-                      ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5))
+                      ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
                       : const Text('Create account'),
                 ),
               ],
             ),
           ),
-        ),
+            ),
+          ),
+        ],
       ),
     );
+  }
+}
+
+/// "1 · Your account   2 · School ID photo" progress under the header.
+class _StepBar extends StatelessWidget {
+  const _StepBar();
+
+  @override
+  Widget build(BuildContext context) {
+    Widget step(String label, bool active) => Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                height: 6,
+                decoration: BoxDecoration(
+                  color: active ? AppColors.gold : Colors.white24,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: active ? Colors.white : const Color(0xFFC9CDF2),
+                  )),
+            ],
+          ),
+        );
+    return Row(children: [step('1 · Your account', true), const SizedBox(width: 8), step('2 · School ID photo', false)]);
   }
 }

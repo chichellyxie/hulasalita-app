@@ -3,6 +3,7 @@ import '../models/guess_result.dart';
 import '../models/json.dart';
 import '../models/paginated.dart';
 import '../models/puzzle.dart';
+import '../models/saved_word.dart';
 
 class PuzzleRepository {
   PuzzleRepository(this._api);
@@ -19,12 +20,14 @@ class PuzzleRepository {
     required String type,
     String? language,
     String? difficulty,
+    String? level,
     int page = 1,
   }) async {
     final data = await _api.get('/puzzles', query: {
       'type': type,
       'language': language,
       'difficulty': difficulty,
+      'level': level,
       'page': page,
       'per_page': 20,
     });
@@ -41,4 +44,18 @@ class PuzzleRepository {
     final data = asMap(await _api.post('/puzzles/$puzzleId/guess', data: {'guess': guess}));
     return GuessResult.fromJson(asMap(data['data']));
   }
+
+  // ---- Word Bank ----
+
+  /// GET /me/word-bank — saved words, newest first.
+  Future<List<SavedWord>> wordBank() async {
+    final data = asMap(await _api.get('/me/word-bank'));
+    return asList(data['data']).map((e) => SavedWord.fromJson(asMap(e))).toList();
+  }
+
+  /// POST /puzzles/{id}/save — only works for finished puzzles.
+  Future<void> saveWord(int puzzleId) async => _api.post('/puzzles/$puzzleId/save');
+
+  /// DELETE /puzzles/{id}/save
+  Future<void> removeWord(int puzzleId) async => _api.delete('/puzzles/$puzzleId/save');
 }

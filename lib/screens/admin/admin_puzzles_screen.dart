@@ -5,8 +5,9 @@ import '../../core/api_exception.dart';
 import '../../models/admin_models.dart';
 import '../../models/puzzle.dart';
 import '../../repositories/admin_repository.dart';
+import '../../core/theme.dart';
+import '../../widgets/app_header.dart';
 import '../../widgets/error_view.dart';
-import '../../widgets/puzzle_card.dart';
 import 'puzzle_form_screen.dart';
 
 class AdminPuzzlesScreen extends StatefulWidget {
@@ -82,14 +83,17 @@ class _AdminPuzzlesScreenState extends State<AdminPuzzlesScreen> {
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'add_puzzle',
+        backgroundColor: AppColors.gold,
+        foregroundColor: AppColors.ink,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         onPressed: () => _openForm(),
-        icon: const Icon(Icons.add),
-        label: const Text('New puzzle'),
+        icon: const Icon(Icons.add_rounded),
+        label: Text('New puzzle', style: displayStyle(size: 17, color: AppColors.ink)),
       ),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 6),
             child: TextField(
               controller: _search,
               textInputAction: TextInputAction.search,
@@ -107,13 +111,17 @@ class _AdminPuzzlesScreenState extends State<AdminPuzzlesScreen> {
           ),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [null, ...PuzzleType.all].map((t) {
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: ChoiceChip(
                     label: Text(t == null ? 'All' : PuzzleType.label(t)),
+                    showCheckmark: false,
+                    selectedColor: AppColors.gold,
+                    side: const BorderSide(color: AppColors.line),
+                    labelStyle: const TextStyle(fontWeight: FontWeight.w800),
                     selected: _type == t,
                     onSelected: (_) {
                       setState(() => _type = t);
@@ -138,7 +146,7 @@ class _AdminPuzzlesScreenState extends State<AdminPuzzlesScreen> {
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView.builder(
-        padding: const EdgeInsets.only(bottom: 96),
+        padding: const EdgeInsets.only(top: 8, bottom: 96),
         itemCount: _items.length + (_hasMore ? 1 : 0),
         itemBuilder: (context, i) {
           if (i >= _items.length) {
@@ -148,23 +156,71 @@ class _AdminPuzzlesScreenState extends State<AdminPuzzlesScreen> {
             );
           }
           final p = _items[i];
-          return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-            child: ListTile(
-              onTap: () => _openForm(p),
-              title: Text(p.prompt, maxLines: 2, overflow: TextOverflow.ellipsis),
-              subtitle: Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Wrap(spacing: 6, runSpacing: 4, children: [
-                  InfoChip(label: PuzzleType.label(p.type)),
-                  if (p.language != null) InfoChip(label: p.language!.code.toUpperCase(), color: Colors.blueGrey),
-                  DifficultyChip(difficulty: p.difficulty),
-                  InfoChip(label: 'Answer: ${p.answer}', color: Colors.black87),
-                  if (p.scheduledFor != null) InfoChip(label: p.scheduledFor!, color: Colors.teal),
-                  InfoChip(label: '${p.attemptsCount} plays', color: Colors.grey),
-                ]),
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+            child: Card(
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () => _openForm(p),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 4, 12),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(p.prompt, maxLines: 2, overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, height: 1.35)),
+                            const SizedBox(height: 8),
+                            Wrap(spacing: 5, runSpacing: 5, children: [
+                              Pill(label: PuzzleType.label(p.type)),
+                              if (p.language != null)
+                                Pill(label: p.language!.code.toUpperCase(), background: const Color(0xFFEEF0F6), foreground: const Color(0xFF3A4060)),
+                              Pill.difficulty(p.difficulty),
+                              if (p.level != null && PuzzleType.leveled.contains(p.type))
+                                Pill(label: SchoolLevel.shortLabel(p.level!), background: AppColors.background, foreground: AppColors.muted),
+                              if (p.choices.isNotEmpty)
+                                Pill(label: '${p.choices.length} choices', background: AppColors.contextSoft, foreground: AppColors.context),
+                              if (p.scheduledFor != null)
+                                Pill(label: p.scheduledFor!, background: AppColors.scrambleSoft, foreground: AppColors.scramble),
+                            ]),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text.rich(
+                                    TextSpan(children: [
+                                      const TextSpan(text: 'Answer: '),
+                                      TextSpan(text: p.answer, style: const TextStyle(fontWeight: FontWeight.w800)),
+                                      TextSpan(text: ' · ${p.attemptsCount} plays'),
+                                    ]),
+                                    style: const TextStyle(fontSize: 12, color: Color(0xFF3A4060)),
+                                  ),
+                                ),
+                                Text(
+                                  p.hasLearnCard ? 'Learn card ready' : 'Learn card missing',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                    color: p.hasLearnCard ? AppColors.correct : AppColors.wrong,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Delete puzzle',
+                        icon: const Icon(Icons.delete_outline_rounded, color: AppColors.muted),
+                        onPressed: () => _delete(p),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              trailing: IconButton(icon: const Icon(Icons.delete_outline), onPressed: () => _delete(p)),
             ),
           );
         },

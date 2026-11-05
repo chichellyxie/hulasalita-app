@@ -50,6 +50,14 @@ class AdminPuzzle {
     this.language,
     this.category,
     this.attemptsCount = 0,
+    this.level,
+    this.choices = const [],
+    this.explanation,
+    this.translationEn,
+    this.translationFil,
+    this.translationPag,
+    this.glossary,
+    this.funFact,
   });
 
   final int id;
@@ -66,6 +74,20 @@ class AdminPuzzle {
   final PuzzleCategory? category;
   final int attemptsCount;
 
+  final String? level; // elem_lower | elem_upper | jhs | shs | null (everyone)
+  final List<String> choices; // empty = students type the answer
+
+  // Learn card (shown to students after they finish the puzzle)
+  final String? explanation;
+  final String? translationEn;
+  final String? translationFil;
+  final String? translationPag;
+  final String? glossary;
+  final String? funFact;
+
+  bool get hasLearnCard => [explanation, translationEn, translationFil, translationPag, glossary, funFact]
+      .any((v) => v != null && v.trim().isNotEmpty);
+
   factory AdminPuzzle.fromJson(Map<String, dynamic> json) => AdminPuzzle(
         id: asInt(json['id']),
         type: asString(json['type']),
@@ -80,6 +102,14 @@ class AdminPuzzle {
         language: json['language'] is Map ? Language.fromJson(asMap(json['language'])) : null,
         category: json['category'] is Map ? PuzzleCategory.fromJson(asMap(json['category'])) : null,
         attemptsCount: asInt(json['attempts_count']),
+        level: asStringOrNull(json['level']),
+        choices: asList(json['choices']).map((e) => asString(e)).where((e) => e.isNotEmpty).toList(),
+        explanation: asStringOrNull(json['explanation']),
+        translationEn: asStringOrNull(json['translation_en']),
+        translationFil: asStringOrNull(json['translation_fil']),
+        translationPag: asStringOrNull(json['translation_pag']),
+        glossary: asStringOrNull(json['glossary']),
+        funFact: asStringOrNull(json['fun_fact']),
       );
 }
 

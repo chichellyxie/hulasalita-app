@@ -7,6 +7,7 @@ import '../../core/api_exception.dart';
 import '../../core/theme.dart';
 import '../../models/admin_models.dart';
 import '../../repositories/admin_repository.dart';
+import '../../widgets/app_header.dart';
 import '../../widgets/error_view.dart';
 
 class VerificationQueueScreen extends StatefulWidget {
@@ -56,24 +57,68 @@ class _VerificationQueueScreenState extends State<VerificationQueueScreen> {
               Text('No school IDs waiting for review.', textAlign: TextAlign.center),
             ])
           : ListView.builder(
-              itemCount: _items.length,
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              itemCount: _items.length + 1,
               itemBuilder: (context, i) {
-                final v = _items[i];
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  child: ListTile(
-                    leading: const CircleAvatar(backgroundColor: AppColors.navy, child: Icon(Icons.badge, color: Colors.white)),
-                    title: Text(v.username, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('${v.school ?? 'No school'}\n${v.email}'),
-                    isThreeLine: true,
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () async {
-                      final decided = await Navigator.push<bool>(
-                        context,
-                        MaterialPageRoute(builder: (_) => VerificationDetailScreen(verification: v)),
-                      );
-                      if (decided == true) _load();
-                    },
+                if (i == 0) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      children: [
+                        SectionLabel('${_items.length} waiting · oldest first'),
+                        const Spacer(),
+                        const Icon(Icons.lock_outline_rounded, size: 16, color: AppColors.muted),
+                        const SizedBox(width: 4),
+                        const Text('Photos are private', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                      ],
+                    ),
+                  );
+                }
+                final v = _items[i - 1];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Card(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      side: BorderSide(color: i == 1 ? AppColors.gold : AppColors.line, width: i == 1 ? 2 : 1),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: () async {
+                        final decided = await Navigator.push<bool>(
+                          context,
+                          MaterialPageRoute(builder: (_) => VerificationDetailScreen(verification: v)),
+                        );
+                        if (decided == true) _load();
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 23,
+                              backgroundColor: AppColors.navySoft,
+                              child: Text(v.username.isNotEmpty ? v.username[0].toUpperCase() : '?',
+                                  style: displayStyle(size: 20)),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(v.username, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                                  Text(v.school ?? 'No school', style: const TextStyle(fontSize: 13, color: Color(0xFF3A4060))),
+                                  Text('${v.email} · ${v.submittedAt?.substring(0, 10) ?? ''}',
+                                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+                                ],
+                              ),
+                            ),
+                            const Pill(label: 'Review', background: AppColors.navy, foreground: Colors.white),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                 );
               },
@@ -128,58 +173,147 @@ class _VerificationDetailScreenState extends State<VerificationDetailScreen> {
     }
   }
 
+  final Set<int> _checked = {};
+
+  static const _checklist = [
+    'School name matches the one chosen',
+    'Photo is clear and readable',
+    'ID is for the current school year',
+  ];
+
   @override
   Widget build(BuildContext context) {
     final v = widget.verification;
 
     return Scaffold(
-      appBar: AppBar(title: Text(v.username)),
-      body: SafeArea(
-        child: Column(
-          children: [
-            ListTile(
-              title: Text(v.school ?? 'No school'),
-              subtitle: Text('${v.email}\nSubmitted: ${v.submittedAt?.substring(0, 10) ?? ''}'),
-              isThreeLine: true,
+      body: Column(
+        children: [
+          AppHeader(
+            title: v.username,
+            subtitle: 'Submitted ${v.submittedAt?.substring(0, 10) ?? ''}',
+            showBack: true,
+          ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+              children: [
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      children: [
+                        _info('School chosen', v.school ?? 'No school'),
+                        const SizedBox(height: 6),
+                        _info('Email', v.email),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    height: 260,
+                    color: AppColors.ink,
+                    child: FutureBuilder<Uint8List>(
+                      future: _image,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState != ConnectionState.done) {
+                          return const Center(child: CircularProgressIndicator(color: Colors.white));
+                        }
+                        if (snapshot.hasError || snapshot.data == null || snapshot.data!.isEmpty) {
+                          return const Center(
+                            child: Text('The ID photo is not available.', style: TextStyle(color: Colors.white70)),
+                          );
+                        }
+                        return InteractiveViewer(child: Center(child: Image.memory(snapshot.data!)));
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text('Pinch to zoom', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                const SizedBox(height: 10),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SectionLabel('Checklist'),
+                        for (var i = 0; i < _checklist.length; i++)
+                          CheckboxListTile(
+                            contentPadding: EdgeInsets.zero,
+                            dense: true,
+                            controlAffinity: ListTileControlAffinity.leading,
+                            activeColor: AppColors.correct,
+                            value: _checked.contains(i),
+                            onChanged: (on) => setState(() {
+                              if (on == true) {
+                                _checked.add(i);
+                              } else {
+                                _checked.remove(i);
+                              }
+                            }),
+                            title: Text(_checklist[i], style: const TextStyle(fontWeight: FontWeight.w700)),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-            Expanded(
-              child: FutureBuilder<Uint8List>(
-                future: _image,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState != ConnectionState.done) return const LoadingView(label: 'Loading ID photo…');
-                  if (snapshot.hasError || snapshot.data == null || snapshot.data!.isEmpty) {
-                    return ErrorView(message: snapshot.error?.toString() ?? 'The ID photo is not available.', icon: Icons.broken_image);
-                  }
-                  return InteractiveViewer(child: Center(child: Image.memory(snapshot.data!)));
-                },
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
+          ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+              child: Column(
                 children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(foregroundColor: Colors.red.shade700),
-                      onPressed: _busy ? null : () => _decide('rejected'),
-                      icon: const Icon(Icons.close),
-                      label: const Text('Reject'),
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(56),
+                            foregroundColor: AppColors.wrong,
+                            side: const BorderSide(color: Color(0xFFB23A3A), width: 2),
+                          ),
+                          onPressed: _busy ? null : () => _decide('rejected'),
+                          icon: const Icon(Icons.close_rounded),
+                          label: const Text('Reject'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(backgroundColor: AppColors.correct),
+                          onPressed: _busy ? null : () => _decide('approved'),
+                          icon: const Icon(Icons.check_rounded),
+                          label: const Text('Approve'),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: _busy ? null : () => _decide('approved'),
-                      icon: const Icon(Icons.check),
-                      label: const Text('Approve'),
-                    ),
-                  ),
+                  const SizedBox(height: 6),
+                  const Text('The photo is deleted right after your decision.',
+                      style: TextStyle(fontSize: 12, color: AppColors.muted)),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
+
+  Widget _info(String label, String value) => Row(
+        children: [
+          Text(label, style: const TextStyle(fontSize: 13, color: AppColors.muted, fontWeight: FontWeight.w700)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(value, textAlign: TextAlign.end, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
+          ),
+        ],
+      );
 }

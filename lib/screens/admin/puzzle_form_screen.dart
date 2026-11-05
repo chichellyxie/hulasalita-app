@@ -6,6 +6,8 @@ import '../../models/admin_models.dart';
 import '../../models/language.dart';
 import '../../models/puzzle.dart';
 import '../../repositories/admin_repository.dart';
+import '../../core/theme.dart';
+import '../../widgets/app_header.dart';
 import '../../widgets/error_view.dart';
 
 /// Add or edit a puzzle. PUT sends every field (full replace).
@@ -23,10 +25,19 @@ class _PuzzleFormScreenState extends State<PuzzleFormScreen> {
   late final TextEditingController _prompt;
   late final TextEditingController _hint;
   late final TextEditingController _answer;
+  // Learn card
+  late final TextEditingController _explanation;
+  late final TextEditingController _trEn;
+  late final TextEditingController _trFil;
+  late final TextEditingController _trPag;
+  late final TextEditingController _glossary;
+  late final TextEditingController _funFact;
 
   late String _type;
   late String _difficulty;
   late int _maxTries;
+  String? _level; // null = every level
+  final List<TextEditingController> _choices = List.generate(4, (_) => TextEditingController());
   int? _languageId;
   int? _categoryId;
   String? _scheduledFor;
@@ -46,9 +57,19 @@ class _PuzzleFormScreenState extends State<PuzzleFormScreen> {
     _prompt = TextEditingController(text: p?.prompt ?? '');
     _hint = TextEditingController(text: p?.hint ?? '');
     _answer = TextEditingController(text: p?.answer ?? '');
+    _explanation = TextEditingController(text: p?.explanation ?? '');
+    _trEn = TextEditingController(text: p?.translationEn ?? '');
+    _trFil = TextEditingController(text: p?.translationFil ?? '');
+    _trPag = TextEditingController(text: p?.translationPag ?? '');
+    _glossary = TextEditingController(text: p?.glossary ?? '');
+    _funFact = TextEditingController(text: p?.funFact ?? '');
     _type = p?.type ?? PuzzleType.bugtong;
     _difficulty = p?.difficulty ?? 'easy';
     _maxTries = p?.maxTries ?? 4;
+    _level = p?.level;
+    for (var i = 0; i < _choices.length && i < (p?.choices.length ?? 0); i++) {
+      _choices[i].text = p!.choices[i];
+    }
     _languageId = p?.languageId;
     _categoryId = p?.categoryId;
     _scheduledFor = p?.scheduledFor;
@@ -60,6 +81,9 @@ class _PuzzleFormScreenState extends State<PuzzleFormScreen> {
     _prompt.dispose();
     _hint.dispose();
     _answer.dispose();
+    for (final c in [_explanation, _trEn, _trFil, _trPag, _glossary, _funFact, ..._choices]) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -91,6 +115,10 @@ class _PuzzleFormScreenState extends State<PuzzleFormScreen> {
     }
   }
 
+  List<String> _choiceValues() => _choices.map((c) => c.text.trim()).where((t) => t.isNotEmpty).toList();
+
+  static String? _textOrNull(TextEditingController c) => c.text.trim().isEmpty ? null : c.text.trim();
+
   Future<void> _save() async {
     setState(() => _errors = {});
     if (!_formKey.currentState!.validate()) return;
@@ -112,7 +140,15 @@ class _PuzzleFormScreenState extends State<PuzzleFormScreen> {
       'hint': _hint.text.trim().isEmpty ? null : _hint.text.trim(),
       'answer': _answer.text.trim(),
       'max_tries': _maxTries,
+      'level': PuzzleType.leveled.contains(_type) ? _level : null,
+      'choices': _choiceValues().isEmpty ? null : _choiceValues(),
       'scheduled_for': _type == PuzzleType.daily ? _scheduledFor : null,
+      'explanation': _textOrNull(_explanation),
+      'translation_en': _textOrNull(_trEn),
+      'translation_fil': _textOrNull(_trFil),
+      'translation_pag': _textOrNull(_trPag),
+      'glossary': _textOrNull(_glossary),
+      'fun_fact': _textOrNull(_funFact),
     };
 
     setState(() => _saving = true);
@@ -134,6 +170,7 @@ class _PuzzleFormScreenState extends State<PuzzleFormScreen> {
           'prompt': e.fieldError('prompt'),
           'answer': e.fieldError('answer'),
           'scheduled_for': e.fieldError('scheduled_for'),
+          'choices': e.fieldError('choices'),
         };
       });
       showSnack(context, e.message, error: true);
@@ -143,7 +180,10 @@ class _PuzzleFormScreenState extends State<PuzzleFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_editing ? 'Edit puzzle' : 'New puzzle')),
+      appBar: HeaderBar(
+        title: _editing ? 'Edit puzzle' : 'New puzzle',
+        subtitle: _editing ? '${PuzzleType.label(widget.puzzle!.type)} · ${widget.puzzle!.attemptsCount} plays' : 'Admin · Puzzles',
+      ),
       body: _loadingLists
           ? const LoadingView()
           : SafeArea(
@@ -176,6 +216,22 @@ class _PuzzleFormScreenState extends State<PuzzleFormScreen> {
                       selected: {_difficulty},
                       onSelectionChanged: (s) => setState(() => _difficulty = s.first),
                     ),
+                    if (PuzzleType.leveled.contains(_type)) ...[
+                      const SizedBox(height: 16),
+                      const Text('School level', style: TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [null, ...SchoolLevel.all]
+                            .map((l) => ChoiceChip(
+                                  label: Text(l == null ? 'All levels' : SchoolLevel.label(l)),
+                                  selected: _level == l,
+                                  onSelected: (_) => setState(() => _level = l),
+                                ))
+                            .toList(),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     DropdownMenu<int>(
                       expandedInsets: EdgeInsets.zero,
@@ -248,6 +304,12 @@ class _PuzzleFormScreenState extends State<PuzzleFormScreen> {
                       ),
                     ],
                     const SizedBox(height: 24),
+                    if (_type != PuzzleType.daily && _type != PuzzleType.scramble) ...[
+                      _choicesSection(),
+                      const SizedBox(height: 16),
+                    ],
+                    _learnSection(),
+                    const SizedBox(height: 24),
                     FilledButton(
                       onPressed: _saving ? null : _save,
                       child: _saving
@@ -258,6 +320,96 @@ class _PuzzleFormScreenState extends State<PuzzleFormScreen> {
                 ),
               ),
             ),
+    );
+  }
+
+  /// Optional multiple choice. Leave all empty to let students type the answer.
+  Widget _choicesSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: AppColors.navySoft, borderRadius: BorderRadius.circular(20)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SectionLabel('Multiple choice · optional', color: AppColors.navy),
+          const SizedBox(height: 4),
+          const Text('Leave empty so students type the answer. If you add choices, one must be exactly the answer above.',
+              style: TextStyle(fontSize: 12, color: Color(0xFF3A4060))),
+          if (_errors['choices'] != null) ...[
+            const SizedBox(height: 6),
+            Text(_errors['choices']!, style: const TextStyle(color: AppColors.wrong, fontWeight: FontWeight.w700, fontSize: 13)),
+          ],
+          const SizedBox(height: 10),
+          for (var i = 0; i < _choices.length; i++) ...[
+            TextFormField(
+              controller: _choices[i],
+              maxLength: 150,
+              decoration: InputDecoration(labelText: 'Choice ${String.fromCharCode(65 + i)}', counterText: ''),
+            ),
+            const SizedBox(height: 8),
+          ],
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () {
+                final answer = _answer.text.trim();
+                if (answer.isEmpty) return;
+                final empty = _choices.indexWhere((c) => c.text.trim().isEmpty);
+                if (empty >= 0 && !_choiceValues().contains(answer)) setState(() => _choices[empty].text = answer);
+              },
+              icon: const Icon(Icons.content_copy_rounded, size: 18),
+              label: const Text('Copy the answer into an empty choice'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Optional teaching content shown to students AFTER they finish.
+  Widget _learnSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: AppColors.goldSoft, borderRadius: BorderRadius.circular(20)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SectionLabel('Learn card · shown after answering', color: Color(0xFF6B4600)),
+          const SizedBox(height: 4),
+          const Text('All optional. Students see this together with the answer, never before.',
+              style: TextStyle(fontSize: 12, color: Color(0xFF6B5A2E))),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _explanation,
+            maxLines: 3,
+            maxLength: 1000,
+            decoration: const InputDecoration(labelText: 'Why is this the answer?'),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(child: TextFormField(controller: _trEn, maxLength: 100, decoration: const InputDecoration(labelText: 'English', counterText: ''))),
+              const SizedBox(width: 8),
+              Expanded(child: TextFormField(controller: _trFil, maxLength: 100, decoration: const InputDecoration(labelText: 'Filipino', counterText: ''))),
+              const SizedBox(width: 8),
+              Expanded(child: TextFormField(controller: _trPag, maxLength: 100, decoration: const InputDecoration(labelText: 'Pangasinan', counterText: ''))),
+            ],
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _glossary,
+            maxLength: 255,
+            decoration: const InputDecoration(labelText: 'Word to explain (e.g. butil = grain)'),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _funFact,
+            maxLines: 2,
+            maxLength: 1000,
+            decoration: const InputDecoration(labelText: 'Did you know? (a short fact)'),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -5,10 +5,11 @@ import '../../core/theme.dart';
 import '../../models/puzzle.dart';
 import '../../providers/game_provider.dart';
 import '../../repositories/puzzle_repository.dart';
+import '../../widgets/app_header.dart';
 import '../../widgets/error_view.dart';
-import '../../widgets/letter_tile.dart';
-import '../../widgets/puzzle_card.dart';
+import '../../widgets/learn_card.dart';
 import '../../widgets/result_sheet.dart';
+import '../../widgets/save_word_button.dart';
 
 /// Bugtong, Translate It (type the answer) and Word Scramble (tap the tiles).
 class PuzzleScreen extends StatelessWidget {
@@ -21,10 +22,32 @@ class PuzzleScreen extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (context) => GameProvider(context.read<PuzzleRepository>())..loadPuzzle(puzzleId),
       child: Consumer<GameProvider>(
-        builder: (context, game, _) => Scaffold(
-          appBar: AppBar(title: Text(PuzzleType.label(game.puzzle?.type ?? ''))),
-          body: SafeArea(child: _PuzzleBody(puzzleId: puzzleId)),
-        ),
+        builder: (context, game, _) {
+          final p = game.puzzle;
+          final subtitle = p == null
+              ? null
+              : [if (p.language != null) p.language!.name, if (p.category != null) p.category!.name].join(' · ');
+          return Scaffold(
+            body: Column(
+              children: [
+                AppHeader(
+                  title: PuzzleType.label(p?.type ?? ''),
+                  subtitle: subtitle,
+                  showBack: true,
+                  actions: [
+                    if (p != null && game.state != GameState.finished)
+                      Pill(
+                        label: '${game.triesLeft} ${game.triesLeft == 1 ? 'try' : 'tries'} left',
+                        background: AppColors.gold,
+                        foreground: AppColors.ink,
+                      ),
+                  ],
+                ),
+                Expanded(child: _PuzzleBody(puzzleId: puzzleId)),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -41,8 +64,11 @@ class _PuzzleBody extends StatefulWidget {
 
 class _PuzzleBodyState extends State<_PuzzleBody> {
   final _answer = TextEditingController();
-  final List<int> _picked = []; // indexes of scramble tiles, in tap order
+  final List<int> _picked = []; // indexes of scramble letters, in tap order
+  List<int>? _order; // display order of the scramble tray (for Shuffle)
   bool _showHint = false;
+  String? _choice; // multiple choice: the option the student picked
+  final Set<String> _wrongChoices = {}; // options already tried
 
   @override
   void dispose() {
@@ -54,6 +80,7 @@ class _PuzzleBodyState extends State<_PuzzleBody> {
     if (puzzle.type == PuzzleType.scramble) {
       return _picked.map((i) => puzzle.prompt[i]).join();
     }
+    if (puzzle.isMultipleChoice) return _choice ?? '';
     return _answer.text;
   }
 
@@ -69,6 +96,8 @@ class _PuzzleBodyState extends State<_PuzzleBody> {
       setState(() {
         _answer.clear();
         _picked.clear();
+        if (_choice != null) _wrongChoices.add(_choice!);
+        _choice = null;
       });
     }
   }
@@ -85,140 +114,407 @@ class _PuzzleBodyState extends State<_PuzzleBody> {
 
     final finished = game.state == GameState.finished;
     final busy = game.state == GameState.submitting;
+    final scramble = puzzle.type == PuzzleType.scramble;
 
     return ListView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
       children: [
-        Wrap(spacing: 6, runSpacing: 6, children: [
-          if (puzzle.language != null) InfoChip(label: puzzle.language!.name),
-          if (puzzle.category != null) InfoChip(label: puzzle.category!.name, color: Colors.blueGrey),
-          DifficultyChip(difficulty: puzzle.difficulty, points: puzzle.basePoints),
+        Wrap(spacing: 8, runSpacing: 6, children: [
+          Pill.difficulty(puzzle.difficulty),
+          Pill(label: 'Up to +${puzzle.basePoints} pts', background: const Color(0xFFFCEBC4), foreground: const Color(0xFF6B4600)),
         ]),
-        const SizedBox(height: 16),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: puzzle.type == PuzzleType.scramble
-                ? _scrambleTiles(puzzle, enabled: !finished && !busy)
-                : Text(
-                    puzzle.prompt,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(height: 1.4),
-                  ),
+        const SizedBox(height: 14),
+        // Word Scramble: the clue (hint) is always visible above the letters.
+        if (scramble && puzzle.hint != null) ...[
+          _clueCard(puzzle.hint!),
+          const SizedBox(height: 16),
+        ],
+        if (scramble) _scrambleBoard(puzzle, enabled: !finished && !busy) else _promptCard(puzzle),
+        const SizedBox(height: 14),
+        if (!scramble && puzzle.hint != null && !finished) _hintCard(puzzle.hint!),
+        if (finished) ...[
+          _finishedBanner(game, puzzle),
+          const SizedBox(height: 12),
+          LearnCardView(answer: game.answer, learn: game.learn),
+          const SizedBox(height: 12),
+          SaveWordButton(puzzleId: puzzle.id),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.list_rounded),
+            label: const Text('Back to the list'),
           ),
-        ),
-        const SizedBox(height: 12),
-        if (puzzle.hint != null)
-          Align(
-            child: _showHint
-                ? Text('💡 ${puzzle.hint}', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade800))
-                : TextButton.icon(
-                    onPressed: () => setState(() => _showHint = true),
-                    icon: const Icon(Icons.lightbulb_outline),
-                    label: const Text('Show hint'),
-                  ),
-          ),
-        const SizedBox(height: 12),
-        Text(
-          finished
-              ? (game.solved ? 'Solved! +${game.lastResult?.pointsEarned ?? puzzle.myAttempt.points} points' : 'Out of tries')
-              : 'Tries left: ${game.triesLeft} of ${puzzle.maxTries}',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: finished ? (game.solved ? AppColors.correct : Colors.red.shade700) : AppColors.navy,
-          ),
-        ),
-        const SizedBox(height: 16),
-        if (finished)
-          Card(
-            color: game.solved ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'Answer: ${game.answer?.toUpperCase() ?? '—'}',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-              ),
-            ),
-          )
-        else ...[
-          if (puzzle.type == PuzzleType.scramble)
-            _scrambleAnswer(puzzle)
-          else
+        ] else ...[
+          const SizedBox(height: 14),
+          if (puzzle.isMultipleChoice)
+            _choiceList(puzzle, enabled: !busy)
+          else if (!scramble)
             TextField(
               controller: _answer,
               enabled: !busy,
               textCapitalization: TextCapitalization.none,
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _submit(game),
-              decoration: const InputDecoration(labelText: 'Your answer', prefixIcon: Icon(Icons.edit)),
+              style: displayStyle(size: 22, weight: FontWeight.w700),
+              decoration: InputDecoration(
+                labelText: puzzle.type == PuzzleType.translate ? 'Your answer in ${puzzle.language?.name ?? 'the language'}' : 'Your answer',
+                prefixIcon: const Icon(Icons.edit_rounded),
+              ),
             ),
           if (game.message != null) ...[
-            const SizedBox(height: 8),
-            Text(game.message!, textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade800)),
+            const SizedBox(height: 10),
+            Text(game.message!, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.wrong, fontWeight: FontWeight.w700)),
           ],
           const SizedBox(height: 16),
           FilledButton(
-            onPressed: busy ? null : () => _submit(game),
+            onPressed: (busy || (puzzle.isMultipleChoice && _choice == null)) ? null : () => _submit(game),
             child: busy
-                ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5))
-                : const Text('Submit answer'),
+                ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                : Text(scramble ? 'Check word' : (puzzle.isMultipleChoice ? 'Check answer' : 'Submit answer')),
           ),
         ],
       ],
     );
   }
 
-  Widget _scrambleTiles(Puzzle puzzle, {required bool enabled}) {
+  /// Label and icon above the prompt, per game.
+  static (String, IconData) _promptLabel(String type) => switch (type) {
+        PuzzleType.bugtong => ('Ano ito? What is it?', Icons.lightbulb_outline_rounded),
+        PuzzleType.salawikain => ('Salawikain', Icons.format_quote_rounded),
+        PuzzleType.sawikain => ('Sawikain', Icons.chat_bubble_outline_rounded),
+        PuzzleType.panitikan => ('Panitikan', Icons.menu_book_rounded),
+        PuzzleType.context => ('Context clues', Icons.search_rounded),
+        _ => ('Find the word', Icons.translate_rounded),
+      };
+
+  /// Riddle / proverb / question, in a big white card.
+  Widget _promptCard(Puzzle puzzle) {
+    final centered = puzzle.type == PuzzleType.translate;
+    final (label, icon) = _promptLabel(puzzle.type);
+    final long = puzzle.prompt.length > 45;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(22, 20, 22, 22),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [BoxShadow(color: Color(0x141B1F6B), blurRadius: 20, offset: Offset(0, 6))],
+      ),
+      child: Column(
+        crossAxisAlignment: centered ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 18, color: const Color(0xFF8A6100)),
+              const SizedBox(width: 6),
+              SectionLabel(label, color: const Color(0xFF8A6100)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            puzzle.prompt,
+            textAlign: centered ? TextAlign.center : TextAlign.start,
+            style: displayStyle(size: long ? 21 : (puzzle.type == PuzzleType.bugtong ? 26 : 28), weight: FontWeight.w700).copyWith(height: 1.3),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Multiple choice: one big button per option. Wrong options are crossed out.
+  Widget _choiceList(Puzzle puzzle, {required bool enabled}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SectionLabel('Choose the answer'),
+        const SizedBox(height: 8),
+        for (final (i, option) in puzzle.choices.indexed) ...[
+          _ChoiceButton(
+            letter: String.fromCharCode(65 + i),
+            text: option,
+            selected: _choice == option,
+            wrong: _wrongChoices.contains(option),
+            onTap: (!enabled || _wrongChoices.contains(option)) ? null : () => setState(() => _choice = option),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ],
+    );
+  }
+
+  /// Word Scramble clue card (always shown, like the canvas design).
+  Widget _clueCard(String clue) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: const [BoxShadow(color: Color(0x141B1F6B), blurRadius: 20, offset: Offset(0, 6))],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(color: const Color(0xFFFCEBC4), borderRadius: BorderRadius.circular(16)),
+            child: const Icon(Icons.lightbulb_rounded, color: Color(0xFF8A6100), size: 28),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SectionLabel('Clue'),
+                const SizedBox(height: 2),
+                Text(clue, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.navy, height: 1.3)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _hintCard(String hint) {
+    if (_showHint) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(color: AppColors.goldSoft, borderRadius: BorderRadius.circular(18)),
+        child: Row(
+          children: [
+            const Icon(Icons.lightbulb_rounded, color: Color(0xFF8A6100)),
+            const SizedBox(width: 10),
+            Expanded(child: Text(hint, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF3A2E0E)))),
+          ],
+        ),
+      );
+    }
+    return OutlinedButton.icon(
+      onPressed: () => setState(() => _showHint = true),
+      style: OutlinedButton.styleFrom(side: const BorderSide(color: Color(0xFFC3C8E4), width: 2)),
+      icon: const Icon(Icons.lightbulb_outline_rounded),
+      label: const Text('Show hint'),
+    );
+  }
+
+  Widget _finishedBanner(GameProvider game, Puzzle puzzle) {
+    final solved = game.solved;
+    final points = game.lastResult?.pointsEarned ?? puzzle.myAttempt.points;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: solved ? AppColors.correctSoft : AppColors.wrongSoft,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          Icon(solved ? Icons.check_circle_rounded : Icons.cancel_rounded, color: solved ? AppColors.correct : AppColors.wrong),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              solved ? 'Tama! You earned +$points points.' : 'Out of tries. Study the answer below!',
+              style: TextStyle(fontWeight: FontWeight.w800, color: solved ? const Color(0xFF145C3B) : AppColors.wrong),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Word Scramble: answer slots, a gold letter tray, and Shuffle / Undo / Clear.
+  Widget _scrambleBoard(Puzzle puzzle, {required bool enabled}) {
     final letters = puzzle.prompt.split('');
+    final order = _order ??= List<int>.generate(letters.length, (i) => i);
+    final length = puzzle.answerLength ?? letters.length;
+
     return Column(
       children: [
-        Text('Tap the letters in the right order', style: TextStyle(color: Colors.grey.shade700)),
-        const SizedBox(height: 12),
+        const Text('Build the word', style: TextStyle(color: AppColors.muted, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 10),
         Wrap(
           alignment: WrapAlignment.center,
-          children: List.generate(letters.length, (i) {
-            final used = _picked.contains(i);
-            return LetterTile(
-              letter: letters[i],
-              size: 44,
-              selected: used,
-              onTap: (!enabled || used) ? null : () => setState(() => _picked.add(i)),
-            );
+          spacing: 8,
+          runSpacing: 8,
+          children: List.generate(length, (i) {
+            final letter = i < _picked.length ? letters[_picked[i]] : '';
+            return _Tile(letter: letter, filled: letter.isNotEmpty);
           }),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
+          decoration: BoxDecoration(color: AppColors.navySoft, borderRadius: BorderRadius.circular(24)),
+          child: Column(
+            children: [
+              const Text('Tap the letters in order', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF3A4060))),
+              const SizedBox(height: 12),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  for (final i in order)
+                    _TrayTile(
+                      letter: letters[i],
+                      used: _picked.contains(i),
+                      onTap: (!enabled || _picked.contains(i)) ? null : () => setState(() => _picked.add(i)),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            _toolButton(Icons.shuffle_rounded, 'Shuffle', enabled ? () => setState(() => _order = [...order]..shuffle()) : null),
+            const SizedBox(width: 10),
+            _toolButton(Icons.backspace_outlined, 'Undo', (!enabled || _picked.isEmpty) ? null : () => setState(() => _picked.removeLast())),
+            const SizedBox(width: 10),
+            _toolButton(Icons.clear_all_rounded, 'Clear', (!enabled || _picked.isEmpty) ? null : () => setState(() => _picked.clear())),
+          ],
         ),
       ],
     );
   }
 
-  Widget _scrambleAnswer(Puzzle puzzle) {
-    final length = puzzle.answerLength ?? puzzle.prompt.length;
-    return Column(
-      children: [
-        Wrap(
-          alignment: WrapAlignment.center,
-          children: List.generate(length, (i) {
-            final letter = i < _picked.length ? puzzle.prompt[_picked[i]] : '';
-            return LetterTile(letter: letter, size: 40);
-          }),
+  Widget _toolButton(IconData icon, String label, VoidCallback? onTap) => Expanded(
+        child: OutlinedButton(
+          onPressed: onTap,
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size.fromHeight(52),
+            side: const BorderSide(color: AppColors.line),
+            backgroundColor: Colors.white,
+            padding: EdgeInsets.zero,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [Icon(icon, size: 20), Text(label, style: const TextStyle(fontSize: 12))],
+          ),
         ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TextButton.icon(
-              onPressed: _picked.isEmpty ? null : () => setState(() => _picked.removeLast()),
-              icon: const Icon(Icons.backspace_outlined),
-              label: const Text('Undo'),
-            ),
-            TextButton.icon(
-              onPressed: _picked.isEmpty ? null : () => setState(() => _picked.clear()),
-              icon: const Icon(Icons.clear_all),
-              label: const Text('Clear'),
-            ),
-          ],
+      );
+}
+
+/// Answer slot: navy when filled, dashed-looking outline when empty.
+class _Tile extends StatelessWidget {
+  const _Tile({required this.letter, required this.filled});
+
+  final String letter;
+  final bool filled;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      width: 52,
+      height: 58,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: filled ? AppColors.navy : Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: filled ? AppColors.navy : const Color(0xFF9FA6CC), width: 2),
+      ),
+      child: Text(letter.toUpperCase(), style: displayStyle(size: 28, color: Colors.white)),
+    );
+  }
+}
+
+/// Gold letter in the tray; faded outline once used.
+class _TrayTile extends StatelessWidget {
+  const _TrayTile({required this.letter, required this.used, this.onTap});
+
+  final String letter;
+  final bool used;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Letter $letter${used ? ', used' : ''}',
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          width: 52,
+          height: 56,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: used ? Colors.transparent : AppColors.gold,
+            borderRadius: BorderRadius.circular(16),
+            border: used ? Border.all(color: const Color(0xFFC3C8E4), width: 2) : null,
+            boxShadow: used ? null : const [BoxShadow(color: AppColors.goldDark, offset: Offset(0, 4))],
+          ),
+          child: Text(letter.toUpperCase(), style: displayStyle(size: 26, color: used ? const Color(0xFF9FA6CC) : AppColors.ink)),
         ),
-      ],
+      ),
+    );
+  }
+}
+
+/// One multiple-choice option: A/B/C/D badge + text.
+class _ChoiceButton extends StatelessWidget {
+  const _ChoiceButton({required this.letter, required this.text, required this.selected, required this.wrong, this.onTap});
+
+  final String letter;
+  final String text;
+  final bool selected;
+  final bool wrong;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color border = wrong ? AppColors.wrongSoft : (selected ? AppColors.navy : AppColors.line);
+    final Color fill = wrong ? const Color(0xFFFCF4F4) : (selected ? AppColors.navySoft : Colors.white);
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: wrong ? '$text, already tried' : text,
+      child: Material(
+        color: fill,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 56),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: border, width: 2),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: wrong ? AppColors.wrongSoft : (selected ? AppColors.navy : AppColors.background),
+                    shape: BoxShape.circle,
+                  ),
+                  child: wrong
+                      ? const Icon(Icons.close_rounded, size: 18, color: AppColors.wrong)
+                      : Text(letter, style: TextStyle(fontWeight: FontWeight.w800, color: selected ? Colors.white : AppColors.navy)),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    text,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: wrong ? AppColors.muted : AppColors.ink,
+                      decoration: wrong ? TextDecoration.lineThrough : null,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

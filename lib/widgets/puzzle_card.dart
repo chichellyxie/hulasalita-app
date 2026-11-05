@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../core/theme.dart';
 import '../models/puzzle.dart';
+import 'app_header.dart';
 
-/// A puzzle in a list: prompt preview, language, difficulty and status.
+/// A puzzle in a list: status icon, prompt preview, difficulty and points.
 class PuzzleCard extends StatelessWidget {
   const PuzzleCard({super.key, required this.puzzle, required this.onTap});
 
@@ -13,48 +14,74 @@ class PuzzleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final attempt = puzzle.myAttempt;
-    final IconData icon;
-    final Color iconColor;
-    if (attempt.solved) {
-      icon = Icons.check_circle;
-      iconColor = AppColors.correct;
-    } else if (attempt.finished) {
-      icon = Icons.cancel;
-      iconColor = Colors.red.shade400;
-    } else if (attempt.triesUsed > 0) {
-      icon = Icons.timelapse;
-      iconColor = AppColors.present;
-    } else {
-      icon = Icons.play_circle_fill;
-      iconColor = AppColors.navy;
-    }
+    final (IconData icon, Color fg, Color bg, String status) = switch (attempt) {
+      _ when attempt.solved => (Icons.check_rounded, AppColors.correct, AppColors.correctSoft, 'Review answer'),
+      _ when attempt.finished => (Icons.close_rounded, AppColors.wrong, AppColors.wrongSoft, 'See the answer'),
+      _ when attempt.triesUsed > 0 => (Icons.timelapse_rounded, const Color(0xFF8A6100), const Color(0xFFFCEBC4), '${attempt.triesLeft} tries left'),
+      _ => (Icons.play_arrow_rounded, AppColors.navy, AppColors.navySoft, 'Up to ${puzzle.basePoints} pts · ${puzzle.maxTries} tries'),
+    };
 
-    final preview = puzzle.type == PuzzleType.scramble ? puzzle.prompt.split('').join(' ') : puzzle.prompt;
+    final scramble = puzzle.type == PuzzleType.scramble;
+    final preview = scramble ? puzzle.prompt.split('').join(' ') : puzzle.prompt;
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: ListTile(
-        onTap: onTap,
-        leading: Icon(icon, color: iconColor, size: 32),
-        title: Text(preview, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 6),
-          child: Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            children: [
-              if (puzzle.language != null) InfoChip(label: puzzle.language!.name),
-              DifficultyChip(difficulty: puzzle.difficulty, points: puzzle.basePoints),
-              if (attempt.solved) InfoChip(label: '+${attempt.points} pts', color: AppColors.correct),
-            ],
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(14)),
+                  child: Icon(icon, color: fg, size: 24),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        preview,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: scramble
+                            ? displayStyle(size: 18, color: AppColors.ink, weight: FontWeight.w700).copyWith(letterSpacing: 2)
+                            : const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, height: 1.35),
+                      ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          if (puzzle.language != null) Pill(label: puzzle.language!.name),
+                          Pill.difficulty(puzzle.difficulty),
+                          if (puzzle.level != null && PuzzleType.leveled.contains(puzzle.type))
+                            Pill(label: SchoolLevel.shortLabel(puzzle.level!), background: AppColors.background, foreground: AppColors.muted),
+                          if (attempt.solved)
+                            Pill(label: 'Earned +${attempt.points}', background: const Color(0xFFFCEBC4), foreground: const Color(0xFF6B4600)),
+                          Text(status, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: attempt.solved ? AppColors.correct : AppColors.muted)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded, color: AppColors.muted),
+              ],
+            ),
           ),
         ),
-        trailing: const Icon(Icons.chevron_right),
       ),
     );
   }
 }
 
+/// Outlined chip (still used by admin screens).
 class InfoChip extends StatelessWidget {
   const InfoChip({super.key, required this.label, this.color = AppColors.navyLight});
 
@@ -81,13 +108,5 @@ class DifficultyChip extends StatelessWidget {
   final int? points;
 
   @override
-  Widget build(BuildContext context) {
-    final color = switch (difficulty) {
-      'easy' => AppColors.correct,
-      'medium' => const Color(0xFFEF6C00),
-      _ => Colors.red.shade700,
-    };
-    final label = '${difficulty[0].toUpperCase()}${difficulty.substring(1)}${points != null ? ' · $points pts' : ''}';
-    return InfoChip(label: label, color: color);
-  }
+  Widget build(BuildContext context) => Pill.difficulty(difficulty, points: points);
 }

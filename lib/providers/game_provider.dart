@@ -25,6 +25,11 @@ class GameProvider extends ChangeNotifier {
   int get triesLeft => lastResult?.triesLeft ?? puzzle?.myAttempt.triesLeft ?? 0;
   bool get solved => lastResult?.solved ?? puzzle?.myAttempt.solved ?? false;
   String? get answer => lastResult?.answer ?? puzzle?.answer;
+  LearnCard? get learn => lastResult?.learn ?? puzzle?.learn;
+
+  /// Hint to show now. For the Daily Word Guess the server only sends it
+  /// once 2 tries are left (or the puzzle is finished).
+  String? get hint => lastResult?.hint ?? puzzle?.hint;
 
   Future<void> loadDaily() => _load(() => _repo.daily(), daily: true);
 
