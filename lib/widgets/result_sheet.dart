@@ -5,14 +5,14 @@ import 'package:flutter/services.dart';
 
 import '../core/theme.dart';
 import '../models/guess_result.dart';
-import 'app_header.dart';
 import 'confetti.dart';
 import 'kwago.dart';
 import 'learn_card.dart';
+import 'night_ui.dart';
 import 'save_word_button.dart';
 
 /// Shown when a puzzle ends: result, points, streak, new badges and the
-/// Learn card (answer + teaching content).
+/// learn card. Correct = mint + confetti, incorrect = soft rose.
 Future<void> showResultSheet(BuildContext context, GuessResult result) {
   if (result.solved) {
     HapticFeedback.mediumImpact();
@@ -23,7 +23,7 @@ Future<void> showResultSheet(BuildContext context, GuessResult result) {
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    backgroundColor: AppColors.background,
+    backgroundColor: Night.bg,
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
     builder: (context) => ResultSheet(result: result),
   );
@@ -40,7 +40,8 @@ class ResultSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final won = result.solved;
-    final headerColor = won ? AppColors.correct : AppColors.navy;
+    final face = won ? Night.correct : Night.wrong;
+    final deep = won ? Night.correctDeep : Night.wrongDeep;
     final rnd = Random(result.puzzleId);
     final kwagoLine = won ? _cheers[rnd.nextInt(_cheers.length)] : _comfort[rnd.nextInt(_comfort.length)];
 
@@ -50,43 +51,48 @@ class ResultSheet extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Drag handle
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 10, bottom: 6),
+              width: 44,
+              height: 5,
+              decoration: BoxDecoration(color: Night.line, borderRadius: BorderRadius.circular(3)),
+            ),
+          ),
           Container(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
+            margin: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
             decoration: BoxDecoration(
-              color: headerColor,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(28), bottom: Radius.circular(28)),
+              color: face,
+              borderRadius: BorderRadius.circular(26),
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), offset: const Offset(0, 5))],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    TweenAnimationBuilder<double>(
-                      tween: Tween(begin: 0.4, end: 1),
-                      duration: const Duration(milliseconds: 650),
-                      curve: Curves.elasticOut,
-                      builder: (context, v, child) => Transform.scale(scale: v, child: child),
-                      child: CircleAvatar(
-                      radius: 28,
-                      backgroundColor: Colors.white,
-                      child: Icon(won ? Icons.check_rounded : Icons.sentiment_dissatisfied_rounded, color: headerColor, size: 32),
-                    ),
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(color: deep, shape: BoxShape.circle),
+                      child: Icon(won ? Icons.check_rounded : Icons.close_rounded, color: Colors.white, size: 34),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(won ? 'Tama!' : 'Sayang!', style: displayStyle(size: 30, color: Colors.white)),
+                          Text(won ? 'Tama!' : 'Sayang!', style: displayStyle(size: 30, color: AppColors.ink)),
                           Text(
-                            won
-                                ? 'Solved on try ${result.triesUsed} of ${result.maxTries}'
-                                : 'Out of tries — here is the answer.',
-                            style: const TextStyle(color: Color(0xFFDDEFE5), fontWeight: FontWeight.w700),
+                            won ? 'Solved on try ${result.triesUsed} of ${result.maxTries}' : 'Out of tries — here is the answer.',
+                            style: const TextStyle(color: Color(0xFF3A3F66), fontWeight: FontWeight.w800),
                           ),
                         ],
                       ),
                     ),
+                    Text(won ? '🎉' : '📚', style: const TextStyle(fontSize: 34)),
                   ],
                 ),
                 const SizedBox(height: 14),
@@ -94,14 +100,9 @@ class ResultSheet extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    Pill(label: '+${result.pointsEarned} pts', background: AppColors.gold, foreground: AppColors.ink),
-                    Pill(
-                      label: '${result.currentStreak}-day streak',
-                      icon: Icons.local_fire_department_rounded,
-                      background: Colors.white24,
-                      foreground: Colors.white,
-                    ),
-                    Pill(label: '${result.pointsToday}/${result.dailyCap} today', background: Colors.white24, foreground: Colors.white),
+                    NightPill('+${result.pointsEarned} pts', emoji: '⭐', color: AppColors.gold, textColor: AppColors.ink),
+                    NightPill('${result.currentStreak}-day streak', emoji: '🔥', color: Colors.white.withValues(alpha: 0.7), textColor: AppColors.ink),
+                    NightPill('${result.pointsToday}/${result.dailyCap} today', color: Colors.white.withValues(alpha: 0.7), textColor: AppColors.ink),
                   ],
                 ),
               ],
@@ -109,44 +110,42 @@ class ResultSheet extends StatelessWidget {
           ),
           Flexible(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Kwago(message: kwagoLine, size: 52, onNight: false),
+                  Kwago(message: kwagoLine, size: 52),
                   const SizedBox(height: 14),
                   if (won && result.dailyCapReached) ...[
                     Text(
                       'You reached the ${result.dailyCap}-point daily limit. Keep practicing — points come back tomorrow!',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: AppColors.muted),
+                      style: const TextStyle(color: Night.textMuted, fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 12),
                   ],
                   if (result.newBadges.isNotEmpty) ...[
                     Container(
                       padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(color: AppColors.goldSoft, borderRadius: BorderRadius.circular(20)),
+                      decoration: BoxDecoration(color: AppColors.goldSoft, borderRadius: BorderRadius.circular(20), border: Border.all(color: AppColors.gold, width: 2)),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SectionLabel('New badge${result.newBadges.length > 1 ? 's' : ''}!', color: const Color(0xFF6B4600)),
+                          Text('🏅 New badge${result.newBadges.length > 1 ? 's' : ''}!', style: displayStyle(size: 17, color: const Color(0xFF6B4600))),
                           const SizedBox(height: 8),
                           Wrap(
                             spacing: 8,
                             runSpacing: 8,
-                            children: result.newBadges
-                                .map((b) => Pill(label: b.name, icon: Icons.military_tech_rounded, background: AppColors.gold, foreground: AppColors.ink))
-                                .toList(),
+                            children: result.newBadges.map((b) => NightPill(b.name, emoji: '🏅', color: AppColors.gold, textColor: AppColors.ink)).toList(),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 12),
                   ],
-                  LearnCardView(answer: result.answer, learn: result.learn),
+                  LearnCardView(answer: result.answer, learn: result.learn, onNight: true),
                   const SizedBox(height: 12),
-                  SaveWordButton(puzzleId: result.puzzleId),
+                  SaveWordButton(puzzleId: result.puzzleId, onNight: true),
                 ],
               ),
             ),
@@ -154,8 +153,8 @@ class ResultSheet extends StatelessWidget {
           SafeArea(
             top: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-              child: FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Continue')),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: GoldButton(label: won ? 'Continue' : 'Got it', icon: Icons.arrow_forward_rounded, onPressed: () => Navigator.pop(context)),
             ),
           ),
         ],

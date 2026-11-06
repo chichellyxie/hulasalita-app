@@ -10,22 +10,13 @@ import '../../providers/stats_provider.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/error_view.dart';
 import '../../widgets/kwago.dart';
+import '../../widgets/game_style.dart';
+import '../../widgets/night_ui.dart';
 import 'edit_profile_screen.dart';
 import 'word_bank_screen.dart';
 
 class ProfileTab extends StatelessWidget {
   const ProfileTab({super.key});
-
-  static const _gameColors = {
-    PuzzleType.daily: AppColors.gold,
-    PuzzleType.bugtong: AppColors.bugtong,
-    PuzzleType.scramble: AppColors.scramble,
-    PuzzleType.translate: AppColors.translate,
-    PuzzleType.salawikain: AppColors.salawikain,
-    PuzzleType.sawikain: AppColors.sawikain,
-    PuzzleType.panitikan: AppColors.panitikan,
-    PuzzleType.context: AppColors.context,
-  };
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +57,7 @@ class ProfileTab extends StatelessWidget {
                       Text(name, style: displayStyle(size: 24, color: Colors.white)),
                       Text(user?.school?.name ?? '', style: const TextStyle(color: Color(0xFFC9CDF2), fontWeight: FontWeight.w600, fontSize: 13)),
                       const SizedBox(height: 4),
-                      const Pill(label: 'Verified student', icon: Icons.check_rounded, background: AppColors.correctSoft, foreground: Color(0xFF145C3B)),
+                      const NightPill('Verified student', emoji: '✅', color: Night.correct, textColor: AppColors.ink),
                     ],
                   ),
                 ),
@@ -86,15 +77,15 @@ class ProfileTab extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Row(children: [
-                    _stat('${stats.totalPoints}', 'total points', Icons.star_rounded, const Color(0xFFFCEBC4), const Color(0xFF8A6100)),
+                    _stat('${stats.totalPoints}', 'total points', '⭐', const Color(0xFFFFE08A)),
                     const SizedBox(width: 10),
-                    _stat('${stats.currentStreak}', 'day streak', Icons.local_fire_department_rounded, const Color(0xFFFBE3D6), const Color(0xFFA3400F)),
+                    _stat('${stats.currentStreak}', 'day streak', '🔥', const Color(0xFFFFC49B)),
                   ]),
                   const SizedBox(height: 10),
                   Row(children: [
-                    _stat('${stats.pointsThisWeek}', 'points this week', Icons.calendar_month_rounded, AppColors.navySoft, AppColors.navy),
+                    _stat('${stats.pointsThisWeek}', 'points this week', '📅', const Color(0xFFB9A8FF)),
                     const SizedBox(width: 10),
-                    _stat('${stats.puzzlesSolved}', 'puzzles solved', Icons.check_circle_rounded, AppColors.correctSoft, AppColors.correct),
+                    _stat('${stats.puzzlesSolved}', 'puzzles solved', '✅', const Color(0xFF9BE5C2)),
                   ]),
                   const SizedBox(height: 14),
                   _WordBankShortcut(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WordBankScreen()))),
@@ -105,7 +96,11 @@ class ProfileTab extends StatelessWidget {
                 ],
                 const SizedBox(height: 20),
                 OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFFF9C9C), side: const BorderSide(color: AppColors.nightLine, width: 2)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Night.wrong,
+                    backgroundColor: Night.card,
+                    side: const BorderSide(color: Night.line, width: 1.5),
+                  ),
                   onPressed: () async {
                     final ok = await confirmDialog(context, title: 'Log out?', message: 'You can log in again anytime.', confirmLabel: 'Log out');
                     if (ok && context.mounted) await context.read<AuthProvider>().logout();
@@ -121,31 +116,40 @@ class ProfileTab extends StatelessWidget {
     );
   }
 
-  Widget _stat(String value, String label, IconData icon, Color soft, Color color) {
+  /// Pastel stat tile, like the game tiles on Home.
+  Widget _stat(String value, String label, String emoji, Color color) {
     return Expanded(
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(color: soft, borderRadius: BorderRadius.circular(12)),
-                child: Icon(icon, color: color, size: 22),
+      child: Container(
+        height: 78,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.25), offset: const Offset(0, 4))],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.8), borderRadius: BorderRadius.circular(13)),
+              child: Text(emoji, style: const TextStyle(fontSize: 22, height: 1)),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(value, style: displayStyle(size: 24, color: AppColors.ink)),
+                  Text(label,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF3A3F66))),
+                ],
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(value, style: displayStyle(size: 22)),
-                    Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.muted), overflow: TextOverflow.ellipsis),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -153,34 +157,33 @@ class ProfileTab extends StatelessWidget {
 
   Widget _solvedByGame(PlayerStats stats) {
     final most = stats.solvedByType.values.fold<int>(1, (a, b) => b > a ? b : a);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SectionLabel('Solved by game'),
-            for (final t in PuzzleType.all) ...[
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(child: Text(PuzzleType.label(t), style: const TextStyle(fontWeight: FontWeight.w700))),
-                  Text('${stats.solvedByType[t] ?? 0}', style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.navy)),
-                ],
+    return NightCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const NightLabel('Solved by game'),
+          for (final t in PuzzleType.all) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Text(GameStyle.of(t).emoji, style: const TextStyle(fontSize: 16, height: 1)),
+                const SizedBox(width: 8),
+                Expanded(child: Text(PuzzleType.label(t), style: const TextStyle(fontWeight: FontWeight.w700, color: Night.text))),
+                Text('${stats.solvedByType[t] ?? 0}', style: displayStyle(size: 16, color: AppColors.gold)),
+              ],
+            ),
+            const SizedBox(height: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: (stats.solvedByType[t] ?? 0) / most,
+                minHeight: 8,
+                color: GameStyle.of(t).tile,
+                backgroundColor: Night.cardDeep,
               ),
-              const SizedBox(height: 6),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: (stats.solvedByType[t] ?? 0) / most,
-                  minHeight: 8,
-                  color: _gameColors[t],
-                  backgroundColor: const Color(0xFFE8EAF4),
-                ),
-              ),
-            ],
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -220,7 +223,7 @@ class _BadgesSectionState extends State<_BadgesSection> {
       children: [
         Row(
           children: [
-            const SectionLabel('Badges', color: AppColors.lavender),
+            const NightLabel('Badges'),
             const Spacer(),
             Text('${stats.badgesEarned} of ${badges.length} earned',
                 style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.onNight, fontSize: 13)),
@@ -276,9 +279,9 @@ class _BadgeTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(6, 10, 6, 8),
       decoration: BoxDecoration(
-        color: b.earned ? AppColors.goldSoft : Colors.white,
+        color: b.earned ? AppColors.goldSoft : Night.card,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE8EAF4)),
+        border: Border.all(color: b.earned ? AppColors.gold : Night.line, width: b.earned ? 2 : 1),
       ),
       child: Column(
         children: [
@@ -286,23 +289,23 @@ class _BadgeTile extends StatelessWidget {
             width: compact ? 42 : 50,
             height: compact ? 42 : 50,
             decoration: BoxDecoration(
-              color: b.earned ? AppColors.gold : const Color(0xFFE8EAF4),
+              color: b.earned ? AppColors.gold : Night.cardDeep,
               shape: BoxShape.circle,
               boxShadow: b.earned ? const [BoxShadow(color: AppColors.goldDark, offset: Offset(0, 3))] : null,
             ),
             child: Icon(b.earned ? Icons.military_tech_rounded : Icons.lock_outline_rounded,
-                color: b.earned ? AppColors.ink : AppColors.muted, size: compact ? 22 : 26),
+                color: b.earned ? AppColors.ink : Night.textMuted, size: compact ? 22 : 26),
           ),
           const SizedBox(height: 6),
           Text(b.name, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: compact ? 11 : 12, fontWeight: FontWeight.w800, height: 1.2)),
+              style: TextStyle(fontSize: compact ? 11 : 12, fontWeight: FontWeight.w800, height: 1.2, color: b.earned ? AppColors.ink : Night.text)),
           const SizedBox(height: 2),
           if (compact)
             const Spacer()
           else
             Expanded(
               child: Text(b.description, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 10.5, color: AppColors.muted, height: 1.2)),
+                  style: TextStyle(fontSize: 10.5, color: b.earned ? const Color(0xFF6B5A2E) : Night.textMuted, height: 1.2)),
             ),
           if (b.earned)
             const Text('Earned', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF145C3B)))
@@ -312,12 +315,12 @@ class _BadgeTile extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: b.goal == 0 ? 0 : progress / b.goal,
                 minHeight: 5,
-                color: AppColors.navy,
-                backgroundColor: AppColors.line,
+                color: AppColors.gold,
+                backgroundColor: Night.cardDeep,
               ),
             ),
             const SizedBox(height: 3),
-            Text('$progress/${b.goal}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.muted)),
+            Text('$progress/${b.goal}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Night.textMuted)),
           ],
         ],
       ),
@@ -334,8 +337,8 @@ class _WordBankShortcut extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.nightCard,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: AppColors.nightLine)),
+      color: Night.card,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22), side: const BorderSide(color: AppColors.gold, width: 1.5)),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: onTap,
@@ -347,7 +350,8 @@ class _WordBankShortcut extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(color: AppColors.gold, borderRadius: BorderRadius.circular(14)),
-                child: const Icon(Icons.bookmark_rounded, color: AppColors.ink),
+                alignment: Alignment.center,
+                child: const Text('🔖', style: TextStyle(fontSize: 22, height: 1)),
               ),
               const SizedBox(width: 12),
               Expanded(

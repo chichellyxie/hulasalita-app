@@ -8,6 +8,7 @@ import '../../core/api_exception.dart';
 import '../../core/theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/app_header.dart';
+import '../../widgets/night_ui.dart';
 import '../../widgets/kwago.dart';
 import '../../widgets/error_view.dart';
 
@@ -84,7 +85,9 @@ class _VerificationScreenState extends State<VerificationScreen> {
     final current = waiting ? 1 : 0;
 
     return Scaffold(
+      backgroundColor: Night.bg,
       body: RefreshIndicator(
+        color: AppColors.gold,
         onRefresh: _checkStatus,
         child: ListView(
           padding: EdgeInsets.zero,
@@ -124,7 +127,6 @@ class _VerificationScreenState extends State<VerificationScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Kwago(
-                    onNight: false,
                     message: rejected
                         ? 'Hindi malinaw ang ID. Mag-upload ulit ng malinaw na litrato!'
                         : waiting
@@ -132,9 +134,9 @@ class _VerificationScreenState extends State<VerificationScreen> {
                             : 'I-upload ang litrato ng school ID mo para makapaglaro!',
                   ),
                   const SizedBox(height: 14),
-                  Card(
+                  NightCard(
                     child: Padding(
-                      padding: const EdgeInsets.all(18),
+                      padding: const EdgeInsets.all(2),
                       child: Column(
                         children: [
                           _step(1, 'Account created', done: true),
@@ -147,15 +149,16 @@ class _VerificationScreenState extends State<VerificationScreen> {
                   ),
                   const SizedBox(height: 14),
                   if (user != null)
-                    Card(
+                    NightCard(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                       child: ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: AppColors.navySoft,
+                          backgroundColor: AppColors.gold,
                           child: Text(user.username.isNotEmpty ? user.username[0].toUpperCase() : '?',
-                              style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.navy)),
+                              style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.ink)),
                         ),
-                        title: Text(user.username, style: const TextStyle(fontWeight: FontWeight.w800)),
-                        subtitle: Text(user.school?.name ?? ''),
+                        title: Text(user.username, style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.white)),
+                        subtitle: Text(user.school?.name ?? '', style: const TextStyle(color: Night.textMuted)),
                       ),
                     ),
                   const SizedBox(height: 14),
@@ -169,32 +172,32 @@ class _VerificationScreenState extends State<VerificationScreen> {
                   Row(
                     children: [
                       Expanded(
-                        child: OutlinedButton.icon(
+                        child: NightOutlinedButton(
                           onPressed: auth.busy ? null : () => _pick(ImageSource.camera),
-                          icon: const Icon(Icons.photo_camera_rounded),
-                          label: const Text('Camera'),
+                          icon: Icons.photo_camera_rounded,
+                          label: 'Camera',
                         ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: OutlinedButton.icon(
+                        child: NightOutlinedButton(
                           onPressed: auth.busy ? null : () => _pick(ImageSource.gallery),
-                          icon: const Icon(Icons.photo_library_rounded),
-                          label: const Text('Gallery'),
+                          icon: Icons.photo_library_rounded,
+                          label: 'Gallery',
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 10),
-                  FilledButton.icon(
-                    onPressed: (_photo == null || auth.busy) ? null : _upload,
-                    icon: auth.busy
-                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : const Icon(Icons.cloud_upload_rounded),
-                    label: Text(waiting ? 'Replace uploaded ID' : 'Upload school ID'),
+                  GoldButton(
+                    label: waiting ? 'Replace uploaded ID' : 'Upload school ID',
+                    icon: Icons.cloud_upload_rounded,
+                    busy: auth.busy,
+                    onPressed: _photo == null ? null : _upload,
                   ),
                   const SizedBox(height: 6),
                   TextButton.icon(
+                    style: TextButton.styleFrom(foregroundColor: AppColors.gold, textStyle: const TextStyle(fontWeight: FontWeight.w800)),
                     onPressed: auth.busy ? null : _checkStatus,
                     icon: const Icon(Icons.refresh_rounded),
                     label: const Text('Check my status'),
@@ -217,7 +220,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
                   ),
                   const SizedBox(height: 12),
                   const Text('Your ID photo is seen only by the administrator and deleted after review.',
-                      textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                      textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Night.textMuted)),
                 ],
               ),
             ),
@@ -229,7 +232,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
 
   /// One row of the status timeline.
   Widget _step(int n, String label, {String? subtitle, bool done = false, bool active = false, bool error = false, bool last = false}) {
-    final Color circle = error ? AppColors.wrong : done ? AppColors.correct : active ? AppColors.gold : Colors.transparent;
+    final Color circle = error ? Night.wrongDeep : done ? Night.correctDeep : active ? AppColors.gold : Colors.transparent;
     return Padding(
       padding: EdgeInsets.only(bottom: last ? 0 : 14),
       child: Row(
@@ -241,11 +244,11 @@ class _VerificationScreenState extends State<VerificationScreen> {
             decoration: BoxDecoration(
               color: circle,
               shape: BoxShape.circle,
-              border: (done || active || error) ? null : Border.all(color: const Color(0xFFC3C8E4), width: 2),
+              border: (done || active || error) ? null : Border.all(color: Night.line, width: 2),
             ),
             child: done
                 ? const Icon(Icons.check_rounded, size: 18, color: Colors.white)
-                : Text('$n', style: TextStyle(fontWeight: FontWeight.w800, color: error ? Colors.white : active ? AppColors.ink : AppColors.muted)),
+                : Text('$n', style: TextStyle(fontWeight: FontWeight.w800, color: error ? Colors.white : active ? AppColors.ink : Night.textMuted)),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -256,9 +259,9 @@ class _VerificationScreenState extends State<VerificationScreen> {
                     style: TextStyle(
                       fontWeight: FontWeight.w800,
                       fontSize: 15,
-                      color: active ? AppColors.navy : (done ? AppColors.ink : AppColors.muted),
+                      color: active ? AppColors.gold : (done ? Colors.white : Night.textMuted),
                     )),
-                if (subtitle != null && active) Text(subtitle, style: const TextStyle(fontSize: 13, color: AppColors.muted)),
+                if (subtitle != null && active) Text(subtitle, style: const TextStyle(fontSize: 13, color: Night.textMuted)),
               ],
             ),
           ),

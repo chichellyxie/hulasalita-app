@@ -7,6 +7,8 @@ import '../../models/school.dart';
 import '../../providers/auth_provider.dart';
 import '../../repositories/reference_repository.dart';
 import '../../widgets/app_header.dart';
+import '../../widgets/kwago.dart';
+import '../../widgets/night_ui.dart';
 import '../../widgets/error_view.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -104,10 +106,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final busy = context.watch<AuthProvider>().busy;
 
     return Scaffold(
-      body: Column(
+      backgroundColor: Night.bg,
+      body: NightFormTheme(
+        child: Column(
         children: [
           AppHeader(
             title: 'Create account',
+            emoji: '🎒',
             showBack: true,
             child: const _StepBar(),
           ),
@@ -119,6 +124,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                const Kwago(message: 'Kumusta! Gawa tayo ng account mo!', size: 54),
+                const SizedBox(height: 18),
                 TextFormField(
                   controller: _username,
                   decoration: InputDecoration(
@@ -191,7 +198,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         const SizedBox(height: 12),
                         if (_schoolLevel == null)
                           const Text('Choose Elementary or High school first to see the schools.',
-                              style: TextStyle(fontSize: 12, color: AppColors.muted))
+                              style: TextStyle(fontSize: 12, color: Night.textMuted))
                         else
                           DropdownMenu<School>(
                       key: ValueKey(_schoolLevel), // rebuild the menu when the filter changes
@@ -244,16 +251,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(color: AppColors.navySoft, borderRadius: BorderRadius.circular(18)),
+                  decoration: BoxDecoration(color: Night.card, borderRadius: BorderRadius.circular(18), border: Border.all(color: Night.line)),
                   child: const Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.shield_outlined, color: AppColors.navy),
+                      Text('🔒', style: TextStyle(fontSize: 20)),
                       SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           "Next, you'll upload a photo of your school ID. Only the administrator sees it, and it is deleted after review.",
-                          style: TextStyle(fontSize: 13, height: 1.45, color: Color(0xFF2A2F4A)),
+                          style: TextStyle(fontSize: 13, height: 1.45, color: Night.text),
                         ),
                       ),
                     ],
@@ -269,22 +276,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   subtitle: GestureDetector(
                     onTap: _showPrivacyNotice,
                     child: const Text('Read the privacy notice',
-                        style: TextStyle(decoration: TextDecoration.underline)),
+                        style: TextStyle(decoration: TextDecoration.underline, color: AppColors.gold, decorationColor: AppColors.gold, fontWeight: FontWeight.w700)),
                   ),
                 ),
                 const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: busy ? null : _submit,
-                  child: busy
-                      ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                      : const Text('Create account'),
-                ),
+                GoldButton(label: 'Create account', icon: Icons.arrow_forward_rounded, busy: busy, onPressed: _submit),
               ],
             ),
           ),
             ),
           ),
         ],
+        ),
       ),
     );
   }

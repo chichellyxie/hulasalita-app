@@ -12,7 +12,7 @@ class SplashScreen extends StatelessWidget {
     final auth = context.watch<AuthProvider>();
 
     return Scaffold(
-      backgroundColor: AppColors.navy,
+      backgroundColor: AppColors.night,
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),

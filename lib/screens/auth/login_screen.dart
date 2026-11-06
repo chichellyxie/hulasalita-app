@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/api_exception.dart';
 import '../../core/theme.dart';
 import '../../widgets/kwago.dart';
+import '../../widgets/night_ui.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/error_view.dart';
 import 'register_screen.dart';
@@ -54,7 +55,9 @@ class _LoginScreenState extends State<LoginScreen> {
     final top = MediaQuery.paddingOf(context).top;
 
     return Scaffold(
-      body: AnnotatedRegion<SystemUiOverlayStyle>(
+      backgroundColor: Night.bg,
+      body: NightFormTheme(
+        child: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.light,
         child: ListView(
           padding: EdgeInsets.zero,
@@ -62,7 +65,11 @@ class _LoginScreenState extends State<LoginScreen> {
             Container(
               padding: EdgeInsets.fromLTRB(24, top + 40, 24, 40),
               decoration: const BoxDecoration(
-                color: AppColors.navy,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppColors.headerTop, AppColors.headerBottom],
+                ),
                 borderRadius: BorderRadius.vertical(bottom: Radius.circular(36)),
               ),
               child: const AppLogo(light: true, big: false),
@@ -74,7 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Kwago(message: 'Welcome back! Tara, hula tayo ng salita!', onNight: false),
+                    const Kwago(message: 'Welcome back! Tara, hula tayo ng salita!'),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _login,
@@ -103,24 +110,19 @@ class _LoginScreenState extends State<LoginScreen> {
                       validator: (v) => (v == null || v.isEmpty) ? 'Enter your password' : null,
                     ),
                     const SizedBox(height: 22),
-                    FilledButton(
-                      onPressed: busy ? null : _submit,
-                      child: busy
-                          ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                          : const Text('Log in'),
-                    ),
+                    GoldButton(label: 'Log in', icon: Icons.login_rounded, busy: busy, onPressed: _submit),
                     const SizedBox(height: 28),
-                    Card(
+                    NightCard(
                       child: Padding(
-                        padding: const EdgeInsets.all(16),
+                        padding: EdgeInsets.zero,
                         child: Row(
                           children: [
                             const Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('New student?', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-                                  Text("Join your school's leaderboard", style: TextStyle(color: AppColors.muted, fontSize: 13)),
+                                  Text('New student? 🎒', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Colors.white)),
+                                  Text("Join your school's leaderboard", style: TextStyle(color: Night.textMuted, fontSize: 13)),
                                 ],
                               ),
                             ),
@@ -146,6 +148,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );

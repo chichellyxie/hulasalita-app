@@ -10,6 +10,8 @@ import '../../widgets/app_header.dart';
 import '../../widgets/error_view.dart';
 import '../../widgets/kwago.dart';
 import '../../widgets/learn_card.dart';
+import '../../widgets/game_style.dart';
+import '../../widgets/night_ui.dart';
 
 /// Saved words to review: tap a word to open its Learn card.
 class WordBankScreen extends StatefulWidget {
@@ -60,7 +62,7 @@ class _WordBankScreenState extends State<WordBankScreen> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: AppColors.background,
+      backgroundColor: Night.bg,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (context) => ConstrainedBox(
         constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.85),
@@ -69,11 +71,11 @@ class _WordBankScreenState extends State<WordBankScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(PuzzleType.label(w.type), style: const TextStyle(color: AppColors.muted, fontWeight: FontWeight.w800)),
+              Text('${GameStyle.of(w.type).emoji}  ${PuzzleType.label(w.type)}', style: const TextStyle(color: Night.label, fontWeight: FontWeight.w800)),
               const SizedBox(height: 4),
-              Text(w.prompt, style: displayStyle(size: 20, weight: FontWeight.w700)),
+              Text(w.prompt, style: displayStyle(size: 20, weight: FontWeight.w700, color: Colors.white)),
               const SizedBox(height: 14),
-              LearnCardView(answer: w.answer, learn: w.learn),
+              LearnCardView(answer: w.answer, learn: w.learn, onNight: true),
             ],
           ),
         ),
@@ -141,7 +143,9 @@ class _WordBankScreenState extends State<WordBankScreen> {
         itemBuilder: (context, i) {
           final w = shown[i];
           final english = w.learn?.translations['en'];
-          return Card(
+          return Material(
+            color: GameStyle.of(w.type).tile,
+            borderRadius: BorderRadius.circular(22),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
               onTap: () => _open(w),
@@ -153,13 +157,13 @@ class _WordBankScreenState extends State<WordBankScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(w.answer, style: displayStyle(size: 22)),
+                          Text(w.answer, style: displayStyle(size: 22, color: AppColors.ink)),
                           if (english != null && english.toLowerCase() != w.answer.toLowerCase())
-                            Text(english, style: const TextStyle(color: AppColors.muted, fontWeight: FontWeight.w700)),
+                            Text(english, style: const TextStyle(color: Color(0xFF3A3F66), fontWeight: FontWeight.w700)),
                           const SizedBox(height: 6),
                           Wrap(spacing: 6, children: [
-                            if (w.language != null) Pill(label: w.language!.name),
-                            Pill(label: PuzzleType.label(w.type), background: AppColors.background, foreground: AppColors.muted),
+                            if (w.language != null) NightPill(w.language!.name, color: Colors.white.withValues(alpha: 0.8), textColor: AppColors.ink),
+                            NightPill(PuzzleType.label(w.type), emoji: GameStyle.of(w.type).emoji, color: Colors.white.withValues(alpha: 0.8), textColor: AppColors.ink),
                           ]),
                         ],
                       ),
@@ -167,7 +171,7 @@ class _WordBankScreenState extends State<WordBankScreen> {
                     IconButton(
                       tooltip: 'Remove',
                       onPressed: () => _remove(w),
-                      icon: const Icon(Icons.bookmark_remove_outlined, color: AppColors.muted),
+                      icon: const Icon(Icons.bookmark_remove_outlined, color: AppColors.ink),
                     ),
                   ],
                 ),

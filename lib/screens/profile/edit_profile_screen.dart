@@ -5,6 +5,7 @@ import '../../core/api_exception.dart';
 import '../../core/theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/app_header.dart';
+import '../../widgets/night_ui.dart';
 import '../../widgets/error_view.dart';
 
 /// PUT /me — change username and/or password.
@@ -69,8 +70,26 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final user = context.watch<AuthProvider>().user;
     final name = user?.username ?? '';
 
+    // Night theme: dark fields with light text, like the rest of the profile.
+    final base = Theme.of(context);
+    final night = base.copyWith(
+      textTheme: base.textTheme.apply(bodyColor: Colors.white, displayColor: Colors.white),
+      inputDecorationTheme: base.inputDecorationTheme.copyWith(
+        fillColor: Night.card,
+        labelStyle: const TextStyle(color: Night.textMuted),
+        floatingLabelStyle: const TextStyle(color: AppColors.gold, fontWeight: FontWeight.w800),
+        prefixIconColor: Night.textMuted,
+        suffixIconColor: Night.textMuted,
+        helperStyle: const TextStyle(color: Night.textMuted),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Night.line, width: 2)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppColors.gold, width: 2)),
+      ),
+    );
     return Scaffold(
-      body: Column(
+      backgroundColor: Night.bg,
+      body: Theme(
+        data: night,
+        child: Column(
         children: [
           const AppHeader(title: 'Edit profile', showBack: true),
           Expanded(
@@ -90,9 +109,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ),
                 const SizedBox(height: 8),
                 const Text('Your avatar uses the first letter of your username',
-                    textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: AppColors.muted)),
+                    textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: Night.textMuted)),
                 const SizedBox(height: 20),
-                const SectionLabel('Account'),
+                const NightLabel('Account'),
                 const SizedBox(height: 10),
                 TextFormField(
                   controller: _username,
@@ -100,10 +119,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   validator: (v) => (v == null || v.trim().length < 3) ? 'At least 3 characters' : null,
                 ),
                 const SizedBox(height: 10),
-                Text('School: ${user?.school?.name ?? '—'}', style: const TextStyle(fontWeight: FontWeight.w700)),
-                const Text('To change your school, ask the administrator.', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                Text('School: ${user?.school?.name ?? '—'}', style: const TextStyle(fontWeight: FontWeight.w700, color: Night.text)),
+                const Text('To change your school, ask the administrator.', style: TextStyle(fontSize: 12, color: Night.textMuted)),
                 const SizedBox(height: 24),
-                const SectionLabel('Change password · optional'),
+                const NightLabel('Change password · optional'),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _current,
@@ -126,13 +145,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   validator: (v) => (_password.text.isNotEmpty && v != _password.text) ? 'Passwords do not match' : null,
                 ),
                 const SizedBox(height: 24),
-                FilledButton(onPressed: busy ? null : _save, child: const Text('Save changes')),
+                GoldButton(label: 'Save changes', icon: Icons.check_rounded, busy: busy, onPressed: _save),
               ],
             ),
           ),
         ),
           ),
         ],
+      ),
       ),
     );
   }
