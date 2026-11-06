@@ -8,6 +8,7 @@ import '../../core/api_exception.dart';
 import '../../core/theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/app_header.dart';
+import '../../widgets/kwago.dart';
 import '../../widgets/error_view.dart';
 
 /// Pending / rejected students: upload the school ID and wait for review.
@@ -122,6 +123,15 @@ class _VerificationScreenState extends State<VerificationScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Kwago(
+                    onNight: false,
+                    message: rejected
+                        ? 'Hindi malinaw ang ID. Mag-upload ulit ng malinaw na litrato!'
+                        : waiting
+                            ? 'Hinihintay pa natin ang admin. Konting tiis lang!'
+                            : 'I-upload ang litrato ng school ID mo para makapaglaro!',
+                  ),
+                  const SizedBox(height: 14),
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(18),

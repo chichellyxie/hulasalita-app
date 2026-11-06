@@ -6,6 +6,7 @@ import '../../models/leaderboard.dart';
 import '../../providers/leaderboard_provider.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/error_view.dart';
+import '../../widgets/kwago.dart';
 
 /// Weekly ranking of verified students from the same school (usernames only).
 class LeaderboardTab extends StatelessWidget {
@@ -18,7 +19,7 @@ class LeaderboardTab extends StatelessWidget {
 
     if (provider.loading && board == null) return const LoadingView();
     if (provider.error != null && board == null) {
-      return ErrorView(message: provider.error!, onRetry: provider.load);
+      return ErrorView(message: provider.error!, onRetry: provider.load, onNight: true);
     }
     if (board == null) return const SizedBox.shrink();
 
@@ -60,8 +61,8 @@ class LeaderboardTab extends StatelessWidget {
               children: [
                 if (board.entries.isEmpty)
                   const Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Text('No points yet this week. Be the first!', textAlign: TextAlign.center),
+                    padding: EdgeInsets.all(12),
+                    child: Kwago(message: 'Wala pang puntos ngayong linggo. Ikaw na ang mauna!'),
                   ),
                 ...rest.map((e) => _Row(entry: e)),
                 const SizedBox(height: 8),

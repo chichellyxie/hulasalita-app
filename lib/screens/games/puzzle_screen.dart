@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme.dart';
@@ -7,6 +8,7 @@ import '../../providers/game_provider.dart';
 import '../../repositories/puzzle_repository.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/error_view.dart';
+import '../../widgets/game_style.dart';
 import '../../widgets/learn_card.dart';
 import '../../widgets/result_sheet.dart';
 import '../../widgets/save_word_button.dart';
@@ -28,10 +30,12 @@ class PuzzleScreen extends StatelessWidget {
               ? null
               : [if (p.language != null) p.language!.name, if (p.category != null) p.category!.name].join(' · ');
           return Scaffold(
+            backgroundColor: AppColors.night,
             body: Column(
               children: [
                 AppHeader(
                   title: PuzzleType.label(p?.type ?? ''),
+                  emoji: p == null ? null : GameStyle.of(p.type).emoji,
                   subtitle: subtitle,
                   showBack: true,
                   actions: [
@@ -93,6 +97,7 @@ class _PuzzleBodyState extends State<_PuzzleBody> {
       FocusScope.of(context).unfocus();
       await showResultSheet(context, result);
     } else {
+      HapticFeedback.lightImpact(); // wrong guess
       setState(() {
         _answer.clear();
         _picked.clear();
@@ -109,7 +114,7 @@ class _PuzzleBodyState extends State<_PuzzleBody> {
 
     if (game.state == GameState.loading) return const LoadingView();
     if (game.state == GameState.failed || puzzle == null) {
-      return ErrorView(message: game.error ?? 'Could not load the puzzle.', onRetry: () => game.loadPuzzle(widget.puzzleId));
+      return ErrorView(message: game.error ?? 'Could not load the puzzle.', onRetry: () => game.loadPuzzle(widget.puzzleId), onNight: true);
     }
 
     final finished = game.state == GameState.finished;
@@ -140,6 +145,7 @@ class _PuzzleBodyState extends State<_PuzzleBody> {
           SaveWordButton(puzzleId: puzzle.id),
           const SizedBox(height: 10),
           OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(foregroundColor: Colors.white, side: const BorderSide(color: AppColors.lavender, width: 2)),
             onPressed: () => Navigator.pop(context),
             icon: const Icon(Icons.list_rounded),
             label: const Text('Back to the list'),
@@ -163,7 +169,7 @@ class _PuzzleBodyState extends State<_PuzzleBody> {
             ),
           if (game.message != null) ...[
             const SizedBox(height: 10),
-            Text(game.message!, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.wrong, fontWeight: FontWeight.w700)),
+            Text(game.message!, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFFFF9C9C), fontWeight: FontWeight.w700)),
           ],
           const SizedBox(height: 16),
           FilledButton(
@@ -226,7 +232,7 @@ class _PuzzleBodyState extends State<_PuzzleBody> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SectionLabel('Choose the answer'),
+        const SectionLabel('Choose the answer', color: AppColors.lavender),
         const SizedBox(height: 8),
         for (final (i, option) in puzzle.choices.indexed) ...[
           _ChoiceButton(
@@ -291,7 +297,7 @@ class _PuzzleBodyState extends State<_PuzzleBody> {
     }
     return OutlinedButton.icon(
       onPressed: () => setState(() => _showHint = true),
-      style: OutlinedButton.styleFrom(side: const BorderSide(color: Color(0xFFC3C8E4), width: 2)),
+      style: OutlinedButton.styleFrom(foregroundColor: Colors.white, side: const BorderSide(color: AppColors.lavender, width: 2)),
       icon: const Icon(Icons.lightbulb_outline_rounded),
       label: const Text('Show hint'),
     );
@@ -329,7 +335,7 @@ class _PuzzleBodyState extends State<_PuzzleBody> {
 
     return Column(
       children: [
-        const Text('Build the word', style: TextStyle(color: AppColors.muted, fontWeight: FontWeight.w700)),
+        const Text('Build the word', style: TextStyle(color: AppColors.onNightMuted, fontWeight: FontWeight.w700)),
         const SizedBox(height: 10),
         Wrap(
           alignment: WrapAlignment.center,

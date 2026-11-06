@@ -9,6 +9,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/stats_provider.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/error_view.dart';
+import '../../widgets/kwago.dart';
 import 'edit_profile_screen.dart';
 import 'word_bank_screen.dart';
 
@@ -34,7 +35,7 @@ class ProfileTab extends StatelessWidget {
     final name = user?.username ?? '';
 
     if (provider.loading && stats == null) return const LoadingView();
-    if (provider.error != null && stats == null) return ErrorView(message: provider.error!, onRetry: provider.load);
+    if (provider.error != null && stats == null) return ErrorView(message: provider.error!, onRetry: provider.load, onNight: true);
 
     return RefreshIndicator(
       onRefresh: provider.load,
@@ -78,6 +79,12 @@ class ProfileTab extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (stats != null) ...[
+                  Kwago(
+                    message: stats.badgesEarned == 0
+                        ? 'Solve your first puzzle to earn a badge!'
+                        : '${stats.badgesEarned} badges na! Ang galing mo, ${user?.username ?? ''}!',
+                  ),
+                  const SizedBox(height: 16),
                   Row(children: [
                     _stat('${stats.totalPoints}', 'total points', Icons.star_rounded, const Color(0xFFFCEBC4), const Color(0xFF8A6100)),
                     const SizedBox(width: 10),
@@ -98,7 +105,7 @@ class ProfileTab extends StatelessWidget {
                 ],
                 const SizedBox(height: 20),
                 OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(foregroundColor: AppColors.wrong, side: const BorderSide(color: Color(0xFFC9D0E4), width: 2)),
+                  style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFFF9C9C), side: const BorderSide(color: AppColors.nightLine, width: 2)),
                   onPressed: () async {
                     final ok = await confirmDialog(context, title: 'Log out?', message: 'You can log in again anytime.', confirmLabel: 'Log out');
                     if (ok && context.mounted) await context.read<AuthProvider>().logout();
@@ -213,10 +220,10 @@ class _BadgesSectionState extends State<_BadgesSection> {
       children: [
         Row(
           children: [
-            const SectionLabel('Badges'),
+            const SectionLabel('Badges', color: AppColors.lavender),
             const Spacer(),
             Text('${stats.badgesEarned} of ${badges.length} earned',
-                style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.navy, fontSize: 13)),
+                style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.onNight, fontSize: 13)),
           ],
         ),
         const SizedBox(height: 10),
@@ -238,6 +245,7 @@ class _BadgesSectionState extends State<_BadgesSection> {
         if (hasMore) ...[
           const SizedBox(height: 8),
           TextButton.icon(
+            style: TextButton.styleFrom(foregroundColor: AppColors.lavender),
             onPressed: () => setState(() => _expanded = !_expanded),
             iconAlignment: IconAlignment.end,
             icon: Icon(_expanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded),
@@ -326,8 +334,8 @@ class _WordBankShortcut extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.navy,
-      borderRadius: BorderRadius.circular(20),
+      color: AppColors.nightCard,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: AppColors.nightLine)),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: onTap,

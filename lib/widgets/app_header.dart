@@ -16,6 +16,7 @@ class AppHeader extends StatelessWidget {
     this.child,
     this.color = AppColors.navy,
     this.bottomPadding = 22,
+    this.emoji,
   });
 
   final String title;
@@ -26,6 +27,7 @@ class AppHeader extends StatelessWidget {
   final Widget? child; // extra content under the title row
   final Color color;
   final double bottomPadding;
+  final String? emoji; // shown before the title, e.g. the game's emoji
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +36,15 @@ class AppHeader extends StatelessWidget {
       value: SystemUiOverlayStyle.light,
       child: Container(
         decoration: BoxDecoration(
-          color: color,
+          // A gradient replaces the flat color for the default navy header.
+          color: color == AppColors.navy ? null : color,
+          gradient: color == AppColors.navy
+              ? const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppColors.headerTop, AppColors.headerBottom],
+                )
+              : null,
           borderRadius: const BorderRadius.vertical(bottom: Radius.circular(28)),
         ),
         padding: EdgeInsets.fromLTRB(20, top + 14, 20, bottomPadding),
@@ -50,6 +60,10 @@ class AppHeader extends StatelessWidget {
                     onPressed: onBack ?? () => Navigator.maybePop(context),
                   ),
                   const SizedBox(width: 12),
+                ],
+                if (emoji != null) ...[
+                  Text(emoji!, style: const TextStyle(fontSize: 28, height: 1)),
+                  const SizedBox(width: 10),
                 ],
                 Expanded(
                   child: Column(

@@ -15,6 +15,16 @@ class AppColors {
   static const Color muted = Color(0xFF5A6178);
   static const Color line = Color(0xFFE1E4F2);
 
+  // Night theme (student screens): dark background with colorful tiles
+  static const Color night = Color(0xFF15173D); // screen background
+  static const Color nightCard = Color(0xFF23266B); // speech bubble, nav bar
+  static const Color nightLine = Color(0xFF34388A);
+  static const Color lavender = Color(0xFFB9B4FF); // section labels on night
+  static const Color onNight = Color(0xFFE9E8FF); // text on night
+  static const Color onNightMuted = Color(0xFFA9ACD6);
+  static const Color headerTop = Color(0xFF1B1F6B);
+  static const Color headerBottom = Color(0xFF2B2F95);
+
   // Game colors
   static const Color bugtong = Color(0xFF5B2A9E);
   static const Color bugtongSoft = Color(0xFFEDE4FA);

@@ -1,14 +1,24 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../core/theme.dart';
 import '../models/guess_result.dart';
 import 'app_header.dart';
+import 'confetti.dart';
+import 'kwago.dart';
 import 'learn_card.dart';
 import 'save_word_button.dart';
 
 /// Shown when a puzzle ends: result, points, streak, new badges and the
 /// Learn card (answer + teaching content).
 Future<void> showResultSheet(BuildContext context, GuessResult result) {
+  if (result.solved) {
+    HapticFeedback.mediumImpact();
+  } else {
+    HapticFeedback.lightImpact();
+  }
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -24,12 +34,17 @@ class ResultSheet extends StatelessWidget {
 
   final GuessResult result;
 
+  static const _cheers = ['Galing mo! 🎉', 'Ang husay! Tama ka!', 'Wow, ang talino mo!', 'Tumpak! Tuloy lang!', 'Bravo! Isa pa?'];
+  static const _comfort = ['Ayos lang! Matuto tayo sa sagot.', 'Muntik na! Basahin ang paliwanag.', 'Sa susunod, kaya mo yan!'];
+
   @override
   Widget build(BuildContext context) {
     final won = result.solved;
     final headerColor = won ? AppColors.correct : AppColors.navy;
+    final rnd = Random(result.puzzleId);
+    final kwagoLine = won ? _cheers[rnd.nextInt(_cheers.length)] : _comfort[rnd.nextInt(_comfort.length)];
 
-    return ConstrainedBox(
+    final sheet = ConstrainedBox(
       constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.9),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -46,10 +61,16 @@ class ResultSheet extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    CircleAvatar(
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0.4, end: 1),
+                      duration: const Duration(milliseconds: 650),
+                      curve: Curves.elasticOut,
+                      builder: (context, v, child) => Transform.scale(scale: v, child: child),
+                      child: CircleAvatar(
                       radius: 28,
                       backgroundColor: Colors.white,
                       child: Icon(won ? Icons.check_rounded : Icons.sentiment_dissatisfied_rounded, color: headerColor, size: 32),
+                    ),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -92,6 +113,8 @@ class ResultSheet extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Kwago(message: kwagoLine, size: 52, onNight: false),
+                  const SizedBox(height: 14),
                   if (won && result.dailyCapReached) ...[
                     Text(
                       'You reached the ${result.dailyCap}-point daily limit. Keep practicing — points come back tomorrow!',
@@ -137,6 +160,14 @@ class ResultSheet extends StatelessWidget {
           ),
         ],
       ),
+    );
+
+    if (!won) return sheet;
+    return Stack(
+      children: [
+        sheet,
+        const Positioned.fill(child: ConfettiBurst()),
+      ],
     );
   }
 }

@@ -8,6 +8,7 @@ import '../../models/saved_word.dart';
 import '../../repositories/puzzle_repository.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/error_view.dart';
+import '../../widgets/kwago.dart';
 import '../../widgets/learn_card.dart';
 
 /// Saved words to review: tap a word to open its Learn card.
@@ -85,10 +86,12 @@ class _WordBankScreenState extends State<WordBankScreen> {
     final shown = _language == null ? _words : _words.where((w) => w.language?.code == _language).toList();
 
     return Scaffold(
+      backgroundColor: AppColors.night,
       body: Column(
         children: [
           AppHeader(
             title: 'My Word Bank',
+            emoji: '🔖',
             subtitle: '${_words.length} saved word${_words.length == 1 ? '' : 's'}',
             showBack: true,
             child: Wrap(
@@ -120,11 +123,13 @@ class _WordBankScreenState extends State<WordBankScreen> {
 
   Widget _body(List<SavedWord> shown) {
     if (_loading) return const LoadingView();
-    if (_error != null) return ErrorView(message: _error!, onRetry: _load);
+    if (_error != null) return ErrorView(message: _error!, onRetry: _load, onNight: true);
     if (_words.isEmpty) {
-      return const ErrorView(
-        message: 'No saved words yet. After you finish a puzzle, tap "Save to Word Bank" to keep it here.',
-        icon: Icons.bookmark_border_rounded,
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(28),
+          child: Kwago(message: 'Wala ka pang naka-save. Pagkatapos ng puzzle, i-tap ang "Save to Word Bank"!'),
+        ),
       );
     }
     return RefreshIndicator(

@@ -20,11 +20,13 @@ class DailyWordScreen extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (context) => GameProvider(context.read<PuzzleRepository>())..loadDaily(),
       child: Scaffold(
+        backgroundColor: AppColors.night,
         body: Column(
           children: [
             Consumer<GameProvider>(
               builder: (context, game, _) => AppHeader(
                 title: 'Daily Word Guess',
+                emoji: '🎯',
                 subtitle: 'Same word for everyone · new word every day',
                 showBack: true,
                 actions: [
@@ -74,7 +76,7 @@ class _DailyBodyState extends State<_DailyBody> {
 
     if (game.state == GameState.loading) return const LoadingView();
     if (game.state == GameState.failed || puzzle == null) {
-      return ErrorView(message: game.error ?? 'Could not load the puzzle.', onRetry: game.loadDaily, icon: Icons.event_busy);
+      return ErrorView(message: game.error ?? 'Could not load the puzzle.', onRetry: game.loadDaily, icon: Icons.event_busy, onNight: true);
     }
 
     final length = puzzle.answerLength ?? 5;
@@ -89,7 +91,7 @@ class _DailyBodyState extends State<_DailyBody> {
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
           child: Column(
             children: [
-              Text(puzzle.prompt, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleMedium),
+              Text(puzzle.prompt, textAlign: TextAlign.center, style: displayStyle(size: 18, color: Colors.white, weight: FontWeight.w700)),
               const SizedBox(height: 8),
               _DailyHint(hint: game.hint, playing: playing, triesLeft: game.triesLeft),
               const SizedBox(height: 8),
@@ -119,7 +121,7 @@ class _DailyBodyState extends State<_DailyBody> {
         if (game.message != null && playing)
           Padding(
             padding: const EdgeInsets.only(bottom: 6),
-            child: Text(game.message!, style: TextStyle(color: Colors.grey.shade800)),
+            child: Text(game.message!, style: const TextStyle(color: AppColors.onNight, fontWeight: FontWeight.w700)),
           ),
         if (game.state == GameState.finished)
           Padding(
@@ -128,7 +130,7 @@ class _DailyBodyState extends State<_DailyBody> {
               game.solved
                   ? 'Solved! Come back tomorrow for a new word.'
                   : 'The word was ${game.answer?.toUpperCase() ?? '—'}. Try again tomorrow!',
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
             ),
           ),
         Padding(
@@ -182,7 +184,7 @@ class _Legend extends StatelessWidget {
           children: [
             Container(width: 12, height: 12, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3))),
             const SizedBox(width: 5),
-            Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF3A4060))),
+            Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.onNightMuted)),
           ],
         );
     return Wrap(

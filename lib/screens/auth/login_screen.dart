@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/api_exception.dart';
 import '../../core/theme.dart';
+import '../../widgets/kwago.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/error_view.dart';
 import 'register_screen.dart';
@@ -73,7 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('Welcome back!', style: displayStyle(size: 28)),
+                    const Kwago(message: 'Welcome back! Tara, hula tayo ng salita!', onNight: false),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _login,

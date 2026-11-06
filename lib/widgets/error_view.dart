@@ -2,26 +2,35 @@ import 'package:flutter/material.dart';
 
 /// Clear message + Retry button, used whenever a request fails.
 class ErrorView extends StatelessWidget {
-  const ErrorView({super.key, required this.message, this.onRetry, this.icon = Icons.wifi_off_rounded});
+  const ErrorView({super.key, required this.message, this.onRetry, this.icon = Icons.wifi_off_rounded, this.onNight = false});
 
   final String message;
   final VoidCallback? onRetry;
   final IconData icon;
+  final bool onNight; // light text for the dark student screens
 
   @override
   Widget build(BuildContext context) {
+    final textColor = onNight ? const Color(0xFFE9E8FF) : null;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 56, color: Colors.grey.shade500),
+            Icon(icon, size: 56, color: onNight ? const Color(0xFFA9ACD6) : Colors.grey.shade500),
             const SizedBox(height: 16),
-            Text(message, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyLarge),
+            Text(message, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: textColor)),
             if (onRetry != null) ...[
               const SizedBox(height: 20),
-              OutlinedButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh), label: const Text('Retry')),
+              OutlinedButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+                style: onNight
+                    ? OutlinedButton.styleFrom(foregroundColor: Colors.white, side: const BorderSide(color: Color(0xFFB9B4FF), width: 2))
+                    : null,
+              ),
             ],
           ],
         ),

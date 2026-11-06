@@ -7,6 +7,8 @@ import '../../providers/puzzle_list_provider.dart';
 import '../../repositories/puzzle_repository.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/error_view.dart';
+import '../../widgets/game_style.dart';
+import '../../widgets/kwago.dart';
 import '../../widgets/puzzle_card.dart';
 import 'puzzle_screen.dart';
 
@@ -33,7 +35,7 @@ class GameListScreen extends StatelessWidget {
     return ChangeNotifierProvider(
       // Starts at "All levels"; students pick a level with the chips.
       create: (context) => PuzzleListProvider(context.read<PuzzleRepository>(), type)..refresh(),
-      child: Scaffold(body: _GameListBody(type: type)),
+      child: Scaffold(backgroundColor: AppColors.night, body: _GameListBody(type: type)),
     );
   }
 }
@@ -51,6 +53,7 @@ class _GameListBody extends StatelessWidget {
       children: [
         AppHeader(
           title: PuzzleType.label(type),
+          emoji: GameStyle.of(type).emoji,
           subtitle: GameListScreen.subtitleFor(type),
           showBack: true,
           bottomPadding: 18,
@@ -71,10 +74,15 @@ class _GameListBody extends StatelessWidget {
   Widget _content(BuildContext context, PuzzleListProvider list) {
     if (list.loading && list.items.isEmpty) return const LoadingView();
     if (list.error != null && list.items.isEmpty) {
-      return ErrorView(message: list.error!, onRetry: list.refresh);
+      return ErrorView(message: list.error!, onRetry: list.refresh, onNight: true);
     }
     if (list.items.isEmpty) {
-      return const ErrorView(message: 'No puzzles here yet. Try another difficulty, language or level.', icon: Icons.search_off);
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(28),
+          child: Kwago(message: 'Wala pang puzzle dito. Subukan ang ibang difficulty, wika o level!'),
+        ),
+      );
     }
 
     final solved = list.items.where((p) => p.myAttempt.solved).length;
@@ -124,7 +132,7 @@ class _Progress extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          Text('$solved of $total${more ? '+' : ''} solved', style: const TextStyle(fontWeight: FontWeight.w800)),
+          Text('★ $solved of $total${more ? '+' : ''} solved', style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.onNight)),
           const SizedBox(width: 10),
           Expanded(
             child: ClipRRect(
@@ -132,8 +140,8 @@ class _Progress extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: total == 0 ? 0 : solved / total,
                 minHeight: 8,
-                color: AppColors.correct,
-                backgroundColor: AppColors.line,
+                color: AppColors.gold,
+                backgroundColor: AppColors.nightLine,
               ),
             ),
           ),
