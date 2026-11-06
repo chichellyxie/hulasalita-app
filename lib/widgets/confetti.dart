@@ -49,12 +49,16 @@ class _ConfettiBurstState extends State<ConfettiBurst> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
+    // ClipRect keeps every piece inside this widget's area, so confetti
+    // never shows outside the result sheet.
     return IgnorePointer(
-      child: AnimatedBuilder(
+      child: ClipRect(
+        child: AnimatedBuilder(
         animation: _controller,
         builder: (context, _) => CustomPaint(
           size: Size.infinite,
           painter: _ConfettiPainter(_pieces, _controller.value * widget.duration.inMilliseconds / 1000),
+        ),
         ),
       ),
     );

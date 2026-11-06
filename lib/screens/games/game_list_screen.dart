@@ -80,6 +80,9 @@ class _GameFlowState extends State<_GameFlow> {
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 250),
+              // Only the current view is drawn; the old one is removed at once,
+              // so setup and cards never show on top of each other.
+              layoutBuilder: (current, previous) => current ?? const SizedBox.shrink(),
               child: _showCards
                   ? _CardsView(key: const ValueKey('cards'), type: widget.type)
                   : _SetupView(

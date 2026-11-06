@@ -12,15 +12,16 @@ class Kwago extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The box is a bit taller than the owl so the cap sits INSIDE it
+    // instead of poking out over the widgets above.
     final owl = SizedBox(
       width: size,
-      height: size,
+      height: size * 1.12,
       child: Stack(
-        clipBehavior: Clip.none,
         alignment: Alignment.center,
         children: [
-          Text('🦉', style: TextStyle(fontSize: size * 0.82, height: 1)),
-          Positioned(top: -size * 0.12, child: Text('🎓', style: TextStyle(fontSize: size * 0.36, height: 1))),
+          Positioned(bottom: 0, child: Text('🦉', style: TextStyle(fontSize: size * 0.82, height: 1))),
+          Positioned(top: 0, child: Text('🎓', style: TextStyle(fontSize: size * 0.36, height: 1))),
         ],
       ),
     );

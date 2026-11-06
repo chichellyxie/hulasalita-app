@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'page_transitions.dart';
 
 /// Universidad de Dagupan navy + HulaSalita gold, plus game tile colors.
 class AppColors {
@@ -68,6 +69,16 @@ class AppTheme {
 
     return base.copyWith(
       scaffoldBackgroundColor: AppColors.background,
+      // Screens fully cover each other while opening (no zoom/see-through).
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: FadeThroughPageTransitionsBuilder(),
+          TargetPlatform.iOS: FadeThroughPageTransitionsBuilder(),
+          TargetPlatform.windows: FadeThroughPageTransitionsBuilder(),
+          TargetPlatform.macOS: FadeThroughPageTransitionsBuilder(),
+          TargetPlatform.linux: FadeThroughPageTransitionsBuilder(),
+        },
+      ),
       textTheme: text.copyWith(
         headlineSmall: displayStyle(size: 26, color: AppColors.ink),
         titleLarge: displayStyle(size: 22, color: AppColors.ink),
